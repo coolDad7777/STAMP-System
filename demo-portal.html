@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAMP Validator Portal - Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/heroicons@2.0.18/24/outline/index.js"></script>
+    <style>
+        /* Custom animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+        }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        
+        /* Status indicators */
+        .status-online { 
+            background-color: #22c55e; 
+            animation: pulse-glow 2s ease-in-out infinite; 
+        }
+        .status-warning { background-color: #f59e0b; }
+        .status-error { background-color: #ef4444; }
+        
+        /* Gradient backgrounds */
+        .bg-gradient-brand {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { 
+            background: #cbd5e1; 
+            border-radius: 3px; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+    <div id="app">
+        <!-- Login Screen (shown initially) -->
+        <div id="login-screen" class="min-h-screen bg-gradient-brand flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+            <div class="sm:mx-auto sm:w-full sm:max-w-md">
+                <div class="flex justify-center">
+                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-white">
+                    STAMP Validator Portal
+                </h2>
+                <p class="mt-2 text-center text-sm text-blue-100">
+                    Secure attendance verification system
+                </p>
+            </div>
+
+            <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+                <div class="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10">
+                    <!-- Demo notice -->
+                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h3 class="text-sm font-medium text-blue-800 mb-2">🚀 Demo Environment</h3>
+                        <p class="text-sm text-blue-700 mb-3">Click any demo account to login:</p>
+                        <div class="space-y-2">
+                            <button onclick="loginAs('officer')" class="demo-login-btn block w-full text-left p-2 text-xs bg-white rounded border hover:bg-gray-50 transition-colors">
+                                <div class="font-medium text-gray-900">Probation Officer</div>
+                                <div class="text-gray-600">officer@demo.gov</div>
+                            </button>
+                            <button onclick="loginAs('admin')" class="demo-login-btn block w-full text-left p-2 text-xs bg-white rounded border hover:bg-gray-50 transition-colors">
+                                <div class="font-medium text-gray-900">Court Administrator</div>
+                                <div class="text-gray-600">admin@demo.gov</div>
+                            </button>
+                            <button onclick="loginAs('auditor')" class="demo-login-btn block w-full text-left p-2 text-xs bg-white rounded border hover:bg-gray-50 transition-colors">
+                                <div class="font-medium text-gray-900">System Auditor</div>
+                                <div class="text-gray-600">auditor@demo.gov</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <form onsubmit="handleLogin(event)">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Email address</label>
+                            <input id="email" type="email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter your email">
+                        </div>
+                        
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700">Password</label>
+                            <input id="password" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter your password">
+                        </div>
+
+                        <div class="mt-6">
+                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                Sign in
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 text-gray-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                            <div class="ml-3">
+                                <h4 class="text-sm font-medium text-gray-900">Security Notice</h4>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    This system uses multi-factor authentication and maintains audit logs of all access attempts.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard (hidden initially) -->
+        <div id="dashboard" class="hidden min-h-screen bg-gray-50">
+            <!-- Sidebar -->
+            <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
+                <div class="flex flex-col h-full">
+                    <!-- Logo -->
+                    <div class="flex items-center h-16 px-6 border-b border-gray-200">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        <span class="ml-2 text-xl font-bold text-gray-900">STAMP Portal</span>
+                    </div>
+                    
+                    <!-- Navigation -->
+                    <nav class="flex-1 px-4 py-6 space-y-2">
+                        <a onclick="showPage('dashboard')" class="nav-item nav-active flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h2a2 2 0 012 2v0H8v0z"></path>
+                            </svg>
+                            Dashboard
+                        </a>
+                        <a onclick="showPage('verification')" class="nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Verification
+                        </a>
+                        <a onclick="showPage('compliance')" class="nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Compliance Reports
+                        </a>
+                        <a onclick="showPage('audit')" class="nav-item flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            Audit Logs
+                        </a>
+                    </nav>
+                    
+                    <!-- User info -->
+                    <div class="p-4 border-t border-gray-200">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p id="user-name" class="text-sm font-medium text-gray-900">Demo User</p>
+                                <p id="user-role" class="text-xs text-gray-500">Probation Officer</p>
+                            </div>
+                            <button onclick="logout()" class="ml-auto p-1 text-gray-400 hover:text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main content -->
+            <div class="ml-64">
+                <!-- Top bar -->
+                <header class="bg-white shadow-sm border-b border-gray-200">
+                    <div class="px-6 py-4">
+                        <div class="flex items-center justify-between">
+                            <h1 id="page-title" class="text-2xl font-semibold text-gray-900">Dashboard</h1>
+                            <div class="flex items-center space-x-4">
+                                <!-- Notifications -->
+                                <div class="relative">
+                                    <button class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM7.25 3.5a2.5 2.5 0 012.5-2.5h.5a2.5 2.5 0 012.5 2.5v0h-5.5v0z"></path>
+                                        </svg>
+                                        <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Status indicator -->
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full status-online"></div>
+                                    <span class="text-sm text-gray-600">System Online</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+                
+                <!-- Page content -->
+                <main class="p-6">
+                    <!-- Dashboard Page -->
+                    <div id="page-dashboard" class="page-content">
+                        <!-- Stats grid -->
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex items-center">
+                                    <div class="p-3 bg-green-100 rounded-lg">
+                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <p class="text-sm text-gray-600">Total Verifications</p>
+                                        <p class="text-2xl font-bold text-gray-900">1,247</p>
+                                        <p class="text-sm text-green-600 font-medium">↗ +12%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex items-center">
+                                    <div class="p-3 bg-yellow-100 rounded-lg">
+                                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <p class="text-sm text-gray-600">Pending Reviews</p>
+                                        <p class="text-2xl font-bold text-gray-900">23</p>
+                                        <p class="text-sm text-red-600 font-medium">↘ -5%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex items-center">
+                                    <div class="p-3 bg-blue-100 rounded-lg">
+                                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <p class="text-sm text-gray-600">Compliance Rate</p>
+                                        <p class="text-2xl font-bold text-gray-900">94.2%</p>
+                                        <p class="text-sm text-green-600 font-medium">↗ +2.1%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex items-center">
+                                    <div class="p-3 bg-purple-100 rounded-lg">
+                                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <p class="text-sm text-gray-600">Active Participants</p>
+                                        <p class="text-2xl font-bold text-gray-900">342</p>
+                                        <p class="text-sm text-green-600 font-medium">↗ +8%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Main dashboard grid -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Chart area -->
+                            <div class="lg:col-span-2">
+                                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <h3 class="text-lg font-medium text-gray-900 mb-4">Compliance Trends</h3>
+                                    <div class="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+                                        <div class="text-center">
+                                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                                            </svg>
+                                            <p class="mt-2 text-sm text-gray-500">Interactive compliance chart</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick actions sidebar -->
+                            <div class="space-y-6">
+                                <!-- Quick Actions -->
+                                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+                                    <div class="space-y-3">
+                                        <button onclick="showPage('verification')" class="w-full flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                                            <div class="p-2 bg-green-100 rounded-lg text-green-600">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm font-medium text-gray-900">Bulk Verify</p>
+                                                <p class="text-xs text-gray-500">Verify multiple stamps</p>
+                                            </div>
+                                        </button>
+                                        
+                                        <button onclick="showPage('compliance')" class="w-full flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                                            <div class="p-2 bg-blue-100 rounded-lg text-blue-600">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm font-medium text-gray-900">Generate Report</p>
+                                                <p class="text-xs text-gray-500">Create compliance report</p>
+                                            </div>
+                                        </button>
+                                        
+                                        <button onclick="exportData()" class="w-full flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                                            <div class="p-2 bg-purple-100 rounded-lg text-purple-600">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm font-medium text-gray-900">Export Data</p>
+                                                <p class="text-xs text-gray-500">Download records</p>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- System Status -->
+                                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <h3 class="text-lg font-medium text-gray-900 mb-4">System Status</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-gray-600">API Services</span>
+                                            <div class="flex items-center">
+                                                <div class="w-2 h-2 bg-green-500 rounded-full status-online mr-2"></div>
+                                                <span class="text-sm text-green-600 font-medium">Operational</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-gray-600">Database</span>
+                                            <div class="flex items-center">
+                                                <div class="w-2 h-2 bg-green-500 rounded-full status-online mr-2"></div>
+                                                <span class="text-sm text-green-600 font-medium">Operational</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-gray-600">Blockchain Network</span>
+                                            <div class="flex items-center">
+                                                <div class="w-2 h-2 bg-green-500 rounded-full status-online mr-2"></div>
+                                                <span class="text-sm text-green-600 font-medium">Operational</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-gray-600">HSM Services</span>
+                                            <div class="flex items-center">
+                                                <div class="w-2 h-2 bg-yellow-500 rounded-full status-warning mr-2"></div>
+                                                <span class="text-sm text-yellow-600 font-medium">Degraded</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Verification Page -->
+                    <div id="page-verification" class="page-content hidden">
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-medium text-gray-900">Attendance Stamp Verification</h3>
+                                <button onclick="bulkVerify()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                    Verify Selected Stamps
+                                </button>
+                            </div>
+                            
+                            <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                                <table class="min-w-full divide-y divide-gray-300">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <input type="checkbox" class="rounded">
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participant ID</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meeting Details</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <input type="checkbox" class="rounded">
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap font-mono text-sm">P-1234</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="font-medium text-gray-900">AA Meeting</div>
+                                                <div class="text-sm text-gray-500">2024-01-15</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm">60 minutes</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="inline-flex px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pending</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <button onclick="verifySingle(this)" class="text-blue-600 hover:text-blue-900 text-sm font-medium">Verify</button>
+                                            </td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <input type="checkbox" class="rounded">
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap font-mono text-sm">P-5678</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="font-medium text-gray-900">NA Meeting</div>
+                                                <div class="text-sm text-gray-500">2024-01-15</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm">45 minutes</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="inline-flex px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pending</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <button onclick="verifySingle(this)" class="text-blue-600 hover:text-blue-900 text-sm font-medium">Verify</button>
+                                            </td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="text-gray-400">—</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap font-mono text-sm">P-9012</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="font-medium text-gray-900">Group Therapy</div>
+                                                <div class="text-sm text-gray-500">2024-01-14</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm">55 minutes</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="inline-flex px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Invalid</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="text-gray-400 text-sm">—</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Other pages (placeholders) -->
+                    <div id="page-compliance" class="page-content hidden">
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-16 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <h3 class="mt-2 text-lg font-medium text-gray-900">Compliance Reports</h3>
+                            <p class="mt-1 text-sm text-gray-500">Advanced compliance reporting features are coming soon.</p>
+                        </div>
+                    </div>
+                    
+                    <div id="page-audit" class="page-content hidden">
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-16 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <h3 class="mt-2 text-lg font-medium text-gray-900">Audit Trail Viewer</h3>
+                            <p class="mt-1 text-sm text-gray-500">Comprehensive audit log analysis tools are coming soon.</p>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo user data
+        const users = {
+            officer: { name: 'Sarah Johnson', role: 'Probation Officer', email: 'officer@demo.gov' },
+            admin: { name: 'Michael Chen', role: 'Court Administrator', email: 'admin@demo.gov' },
+            auditor: { name: 'Dr. Emily Rodriguez', role: 'System Auditor', email: 'auditor@demo.gov' }
+        };
+
+        let currentUser = null;
+
+        // Login functions
+        function loginAs(userType) {
+            const user = users[userType];
+            document.getElementById('email').value = user.email;
+            document.getElementById('password').value = 'demo123';
+            handleLogin(new Event('submit'));
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const user = Object.values(users).find(u => u.email === email);
+            
+            if (!user) {
+                alert('Invalid credentials');
+                return;
+            }
+            
+            currentUser = user;
+            
+            // Update user info in dashboard
+            document.getElementById('user-name').textContent = user.name;
+            document.getElementById('user-role').textContent = user.role;
+            
+            // Show dashboard, hide login
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            
+            // Add fade-in animation
+            document.getElementById('dashboard').classList.add('fade-in');
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        // Navigation functions
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.add('hidden');
+            });
+            
+            // Show selected page
+            document.getElementById(`page-${pageName}`).classList.remove('hidden');
+            
+            // Update page title
+            const titles = {
+                dashboard: 'Dashboard',
+                verification: 'Stamp Verification',
+                compliance: 'Compliance Reports',
+                audit: 'Audit Logs'
+            };
+            document.getElementById('page-title').textContent = titles[pageName];
+            
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('nav-active');
+                item.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
+            });
+            
+            const activeNav = document.querySelector(`[onclick="showPage('${pageName}')"]`);
+            if (activeNav) {
+                activeNav.classList.add('nav-active');
+                activeNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
+            }
+        }
+
+        // Verification functions
+        function bulkVerify() {
+            const checkedBoxes = document.querySelectorAll('#page-verification input[type="checkbox"]:checked');
+            const count = checkedBoxes.length;
+            
+            if (count === 0) {
+                alert('Please select stamps to verify');
+                return;
+            }
+            
+            // Simulate verification process
+            setTimeout(() => {
+                checkedBoxes.forEach(checkbox => {
+                    const row = checkbox.closest('tr');
+                    const statusCell = row.querySelector('span');
+                    const actionCell = row.querySelector('button');
+                    
+                    if (statusCell && statusCell.textContent === 'Pending') {
+                        statusCell.textContent = 'Verified';
+                        statusCell.className = 'inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full';
+                        if (actionCell) actionCell.textContent = '—';
+                        checkbox.disabled = true;
+                    }
+                });
+                
+                alert(`${count} stamps verified successfully!`);
+            }, 1000);
+        }
+
+        function verifySingle(button) {
+            const row = button.closest('tr');
+            const statusCell = row.querySelector('span');
+            
+            // Simulate verification
+            button.textContent = 'Verifying...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                statusCell.textContent = 'Verified';
+                statusCell.className = 'inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full';
+                button.textContent = '✓ Verified';
+                button.classList.add('text-green-600');
+                
+                // Disable checkbox
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.disabled = true;
+            }, 1000);
+        }
+
+        // Utility functions
+        function exportData() {
+            alert('Preparing data export...\n\nIn a real system, this would generate a secure, encrypted export file.');
+        }
+
+        // Add styles for navigation
+        const style = document.createElement('style');
+        style.textContent = `
+            .nav-item {
+                transition: all 0.2s ease;
+            }
+            .nav-active {
+                background-color: #dbeafe;
+                color: #1d4ed8;
+            }
+            .nav-item:not(.nav-active) {
+                color: #6b7280;
+            }
+            .nav-item:not(.nav-active):hover {
+                background-color: #f9fafb;
+                color: #111827;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 STAMP Validator Portal Demo Loaded');
+            console.log('Click any demo account button to login and explore the interface!');
+        });
+    </script>
+</body>
+</html>

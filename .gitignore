@@ -1,0 +1,324 @@
+# Dependencies
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+
+# Build outputs
+dist/
+build/
+*/dist/
+*/build/
+*.tgz
+*.tar.gz
+
+# Logs
+logs/
+*.log
+combined.log
+error.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output/
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Database
+*.sqlite
+*.db
+
+# Docker
+Dockerfile.local
+docker-compose.override.yml
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.tfplan
+
+# Kubernetes
+*.kubeconfig
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.csr
+ssl/
+
+# Cryptographic keys and secrets
+keys/
+secrets/
+*.private
+*.public
+keystore/
+hsm/
+
+# Backup files
+*.backup
+*.bak
+backups/
+
+# Mobile specific
+# React Native
+*.hprof
+
+# Android
+*.ap_
+*.aab
+*.apk
+*.dex
+*.class
+bin/
+gen/
+out/
+local.properties
+proguard/
+
+# iOS
+*.ipa
+*.dSYM.zip
+*.dSYM
+DerivedData/
+build/
+*.xcuserstate
+*.xcuserdatad
+UserInterfaceState.xcuserstate
+
+# Gradle
+.gradle/
+gradle-app.setting
+
+# Xcode
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Testing
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+e2e/screenshots/
+e2e/videos/
+
+# Monitoring and observability
+logs/
+*.log
+prometheus/
+grafana/data/
+
+# Documentation generated files
+docs/build/
+site/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Package manager lock files (keep yarn.lock but ignore others)
+package-lock.json
+pnpm-lock.yaml
+
+# Local configuration overrides
+config/local.json
+config/local.js
+config/local.yml
+
+# Development tools
+.eslintcache
+.stylelintcache
+.vite/
+
+# Audit and security scan results
+audit-results/
+security-scan-results/
+*.sarif
+
+# Production deployment artifacts
+deployment-artifacts/
+releases/
+
+# Local development certificates
+localhost.pem
+localhost-key.pem
+
+# Performance profiling
+profile/
+*.prof
+*.heapsnapshot
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk

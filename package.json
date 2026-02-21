@@ -1,0 +1,68 @@
+{
+  "name": "stamp-system",
+  "version": "1.0.0",
+  "description": "Secure Tracking & Anonymous Meeting Protocol - Court-mandated attendance verification system",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "mobile",
+    "validator-portal"
+  ],
+  "scripts": {
+    "setup:dev": "npm install && npm run setup:db && npm run setup:keys",
+    "setup:db": "docker-compose up -d postgres redis && sleep 10 && npm run db:migrate",
+    "setup:keys": "node scripts/generate-dev-keys.js",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:portal": "npm run dev --workspace=validator-portal",
+    "dev:mobile": "npm run start --workspace=mobile",
+    "build:all": "npm run build --workspace=backend && npm run build --workspace=validator-portal",
+    "test:all": "npm run test --workspace=backend && npm run test --workspace=validator-portal && npm run test --workspace=mobile",
+    "lint:all": "npm run lint --workspace=backend && npm run lint --workspace=validator-portal && npm run lint --workspace=mobile",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:seed": "npm run db:seed --workspace=backend",
+    "security:audit": "npm audit --workspaces && npm run security:scan",
+    "security:scan": "docker run --rm -v \"$PWD\":/src codeanalysis/sonarqube-scanner",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "deploy:staging": "npm run build:all && npm run docker:build && ./scripts/deploy-staging.sh",
+    "deploy:prod": "npm run security:audit && npm run test:all && ./scripts/deploy-production.sh"
+  },
+  "keywords": [
+    "attendance-verification",
+    "court-compliance",
+    "cryptography",
+    "privacy-preserving",
+    "zero-knowledge-proofs",
+    "geolocation",
+    "probation",
+    "parole"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stamp-system/stamp.git"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-security": "^1.7.1",
+    "prettier": "^3.0.0",
+    "typescript": "^5.1.0"
+  },
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/stamp-system/stamp/issues"
+  },
+  "homepage": "https://github.com/stamp-system/stamp#readme"
+}

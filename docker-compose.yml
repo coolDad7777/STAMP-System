@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: stamp-postgres
+    environment:
+      POSTGRES_DB: stamp_dev
+      POSTGRES_USER: stamp_user
+      POSTGRES_PASSWORD: secure_dev_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./database/schemas:/docker-entrypoint-initdb.d/schemas
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stamp_user -d stamp_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - stamp-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: stamp-redis
+    command: redis-server --requirepass secure_redis_password --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - stamp-network
+
+  # HSM Simulator for Development
+  softhsm:
+    image: opendnssec/softhsm2
+    container_name: stamp-hsm-simulator
+    volumes:
+      - hsm_data:/var/lib/softhsm
+      - ./scripts/init-hsm.sh:/docker-entrypoint-initdb.d/init-hsm.sh
+    environment:
+      - SOFTHSM2_CONF=/var/lib/softhsm/softhsm2.conf
+    networks:
+      - stamp-network
+
+  # Backend API Services
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: stamp-backend
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Debug port
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://stamp_user:secure_dev_password@postgres:5432/stamp_dev
+      - REDIS_URL=redis://:secure_redis_password@redis:6379
+      - HSM_PKCS11_LIB=/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so
+      - JWT_SECRET=dev_jwt_secret_change_in_production
+      - ENCRYPTION_KEY=dev_encryption_key_32_bytes_long
+      - LOG_LEVEL=debug
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - hsm_data:/var/lib/softhsm
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      softhsm:
+        condition: service_started
+    networks:
+      - stamp-network
+    restart: unless-stopped
+
+  # Validator Portal
+  validator-portal:
+    build:
+      context: ./validator-portal
+      dockerfile: Dockerfile.dev
+    container_name: stamp-validator-portal
+    ports:
+      - "3001:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000
+      - REACT_APP_ENV=development
+      - GENERATE_SOURCEMAP=true
+    volumes:
+      - ./validator-portal:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - stamp-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: stamp-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./infrastructure/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - validator-portal
+    networks:
+      - stamp-network
+    restart: unless-stopped
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: stamp-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - stamp-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: stamp-grafana
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - stamp-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  hsm_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  stamp-network:
+    driver: bridge
