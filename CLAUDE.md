@@ -29,20 +29,32 @@ STAMP-System/
 │       ├── main.tsx          # React entry point
 │       ├── pages/            # Route-level page components
 │       ├── components/       # Reusable UI components
-│       └── stores/           # Zustand state stores
+│       │   ├── dashboard/    # Dashboard-specific widgets
+│       │   └── ui/           # Base/generic UI components
+│       └── stores/           # Zustand state stores (AuthStore.tsx, etc.)
 ├── mobile/                   # React Native 0.72 (iOS + Android)
 ├── blockchain/               # Ethereum smart contracts (Solidity)
-│   └── contracts/
-│       └── JurisdictionVerifier.sol
+│   ├── contracts/
+│   │   └── JurisdictionVerifier.sol
+│   └── scripts/
+│       └── deploy-contracts.ts
 ├── database/
+│   ├── init.sql              # DB initialization script
 │   └── schemas/
 │       └── stamp_schema.sql  # PostgreSQL 15 schema with RLS
 ├── docs/
-│   └── architecture/
-│       └── SYSTEM_OVERVIEW.md
-├── scripts/                  # Dev tooling scripts
+│   ├── architecture/
+│   │   └── SYSTEM_OVERVIEW.md
+│   └── deployment/
+│       └── DEPLOYMENT_GUIDE.md
+├── scripts/
+│   └── setup.sh              # Automated dev environment setup
 ├── docker-compose.yml        # Full local dev stack
 ├── package.json              # Root npm workspace config
+├── verify-tscb.ts            # Standalone TSCB verification script
+├── stamp-demo.html           # Interactive STAMP demo
+├── demo-portal.html          # Demo validator portal
+├── crypto-verification.html  # Crypto verification demo
 └── CLAUDE.md                 # This file
 ```
 
@@ -358,7 +370,9 @@ Production deployment requires all tests to pass and the security audit to be cl
 ## Key Documentation
 
 - `docs/architecture/SYSTEM_OVERVIEW.md` — Detailed system architecture with Mermaid diagrams
+- `docs/deployment/DEPLOYMENT_GUIDE.md` — Kubernetes, staging/production setup, DB backup/recovery, security hardening
 - `database/schemas/stamp_schema.sql` — Full PostgreSQL schema
 - `backend/src/config/config.ts` — All configuration options and defaults
 - `backend/src/tests/TSCBProtocol.test.ts` — Security tests documenting attack vectors
+- `verify-tscb.ts` — Standalone script for manual TSCB verification
 - `3000/docs` (when running) — Live Swagger API documentation
