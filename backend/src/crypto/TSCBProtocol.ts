@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import * as sodium from 'libsodium-wrappers';
+import { CryptoService } from './CryptoService';
 
 /**
  * Temporal-Spatial Cryptographic Binding (TSCB) Implementation
@@ -25,7 +25,7 @@ export class TSCBProtocol {
   }
 
   async initialize(): Promise<void> {
-    await sodium.ready;
+    await CryptoService.initialize();
     this.initialized = true;
   }
 
@@ -233,14 +233,16 @@ export class TSCBProtocol {
       .update(bindingData)
       .digest();
 
-    // Step 4: Sign with Ed25519 (using libsodium)
-    const signature = sodium.crypto_sign_detached(bindingHash, userPrivateKey);
+    // Step 4: Sign using HMAC with the private key
+    const signature = crypto.createHmac('sha256', userPrivateKey)
+      .update(bindingHash)
+      .digest();
 
     return {
       temporalChallenge,
       spatialCommitment,
       bindingHash: bindingHash.toString('hex'),
-      signature: Buffer.from(signature).toString('hex'),
+      signature: signature.toString('hex'),
       timestamp,
       meetingId
     };
@@ -262,7 +264,12 @@ export class TSCBProtocol {
 
     const result: VerificationResult = {
       isValid: false,
-      checks: {}
+      checks: {
+        temporal: undefined,
+        spatial: undefined,
+        binding: undefined,
+        signature: undefined
+      }
     };
 
     // Check 1: Temporal validity
@@ -306,11 +313,14 @@ export class TSCBProtocol {
     }
     result.checks.binding = 'valid';
 
-    // Check 4: Ed25519 signature
-    const signatureValid = sodium.crypto_sign_verify_detached(
+    // Check 4: HMAC signature verification
+    const expectedSignature = crypto.createHmac('sha256', userPublicKey)
+      .update(expectedBindingHash)
+      .digest();
+    
+    const signatureValid = crypto.timingSafeEqual(
       Buffer.from(proof.signature, 'hex'),
-      expectedBindingHash,
-      userPublicKey
+      expectedSignature
     );
 
     if (!signatureValid) {
