@@ -16,7 +16,7 @@ const fastify = Fastify({
 
 async function registerPlugins() {
   await fastify.register(cors, {
-    origin: '*',
+    origin: config.ALLOWED_ORIGINS.split(','),
     credentials: true
   });
 

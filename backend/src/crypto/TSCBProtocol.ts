@@ -427,21 +427,45 @@ export class TSCBProtocol {
   }
 
   private geohashToCoordinates(geohash: string): { latitude: number; longitude: number } {
-    // Simplified decoding
+    return this.decodeGeohash(geohash);
+  }
+
+  private decodeGeohash(geohash: string): { latitude: number; longitude: number } {
+    const base32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+    let latRange = [-90.0, 90.0];
+    let lonRange = [-180.0, 180.0];
+    let isEven = true;
+
+    for (const char of geohash) {
+      const idx = base32.indexOf(char);
+      if (idx === -1) throw new Error(`Invalid geohash character: ${char}`);
+      for (let i = 4; i >= 0; i--) {
+        const bit = (idx >> i) & 1;
+        if (isEven) {
+          const mid = (lonRange[0] + lonRange[1]) / 2;
+          if (bit) lonRange[0] = mid;
+          else lonRange[1] = mid;
+        } else {
+          const mid = (latRange[0] + latRange[1]) / 2;
+          if (bit) latRange[0] = mid;
+          else latRange[1] = mid;
+        }
+        isEven = !isEven;
+      }
+    }
+
     return {
-      latitude: this.decodeGeohashLatitude(geohash),
-      longitude: this.decodeGeohashLongitude(geohash)
+      latitude: (latRange[0] + latRange[1]) / 2,
+      longitude: (lonRange[0] + lonRange[1]) / 2
     };
   }
 
   private decodeGeohashLatitude(geohash: string): number {
-    // Approximate center of geohash
-    return 0; // Simplified for demo
+    return this.decodeGeohash(geohash).latitude;
   }
 
   private decodeGeohashLongitude(geohash: string): number {
-    // Approximate center of geohash
-    return 0; // Simplified for demo
+    return this.decodeGeohash(geohash).longitude;
   }
 
   private ensureInitialized(): void {

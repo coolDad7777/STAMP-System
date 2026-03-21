@@ -1,7 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { TSCBProtocol } from '../crypto/TSCBProtocol';
 
-const protocol = new TSCBProtocol(process.env.TSCB_MASTER_KEY || 'default-master-key');
+const masterKey = process.env.TSCB_MASTER_KEY;
+if (!masterKey) {
+  throw new Error('TSCB_MASTER_KEY environment variable is required');
+}
+const protocol = new TSCBProtocol(masterKey);
 
 interface VerifyBody {
     proof: {

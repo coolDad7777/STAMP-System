@@ -23,7 +23,7 @@ class DatabaseServiceClass {
   }
 
   async healthCheck(): Promise<boolean> {
-    if (!this.pool) return true;
+    if (!this.pool) return false;
     try {
       await this.pool.query('SELECT 1');
       return true;

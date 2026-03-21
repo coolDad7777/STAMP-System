@@ -86,7 +86,27 @@ class GeohashServiceClass {
   }
 
   adjacent(geohash: string, direction: string): string {
-    return geohash;
+    const { latitude, longitude } = this.decode(geohash);
+    const precision = geohash.length;
+    // Bits alternate: even positions encode longitude, odd positions encode latitude
+    const lonBits = Math.ceil(5 * precision / 2);
+    const latBits = Math.floor(5 * precision / 2);
+    const cellWidth = 360 / Math.pow(2, lonBits);
+    const cellHeight = 180 / Math.pow(2, latBits);
+
+    let lat = latitude;
+    let lon = longitude;
+    switch (direction.toLowerCase()) {
+      case 'n': lat += cellHeight; break;
+      case 's': lat -= cellHeight; break;
+      case 'e': lon += cellWidth; break;
+      case 'w': lon -= cellWidth; break;
+      default: throw new Error(`Invalid direction: ${direction}. Use n, s, e, or w.`);
+    }
+
+    lat = Math.max(-90, Math.min(90, lat));
+    lon = ((lon + 180) % 360 + 360) % 360 - 180;
+    return this.encode(lat, lon, precision);
   }
 }
 
