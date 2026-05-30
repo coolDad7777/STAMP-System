@@ -1,4 +1,5 @@
 import * as crypto from 'crypto';
+import * as sodium from 'libsodium-wrappers';
 import { CryptoService } from './CryptoService';
 
 /**
@@ -25,6 +26,7 @@ export class TSCBProtocol {
   }
 
   async initialize(): Promise<void> {
+    await sodium.ready;
     await CryptoService.initialize();
     this.initialized = true;
   }
@@ -140,12 +142,13 @@ export class TSCBProtocol {
       .update(commitmentInput)
       .digest('hex');
 
+    const center = this.geohashToCoordinates(geohash);
     return {
       geohash,
       precision: 7,
       commitment,
-      latitudeApprox: this.decodeGeohashLatitude(geohash),
-      longitudeApprox: this.decodeGeohashLongitude(geohash)
+      latitudeApprox: center.latitude,
+      longitudeApprox: center.longitude
     };
   }
 
@@ -162,10 +165,15 @@ export class TSCBProtocol {
   ): boolean {
     this.ensureInitialized();
 
-    // Calculate distance between user location and meeting location
+    // Precision must be exactly 7 — coarser violates proximity check, finer violates privacy
+    if (commitment.precision !== 7) {
+      return false;
+    }
+
+    // Decode both geohashes and check haversine distance
     const userCoords = this.geohashToCoordinates(commitment.geohash);
     const meetingCoords = this.geohashToCoordinates(meetingGeohash);
-    
+
     const distance = this.haversineDistance(
       userCoords.latitude,
       userCoords.longitude,
@@ -173,27 +181,7 @@ export class TSCBProtocol {
       meetingCoords.longitude
     );
 
-    // Must be within specified distance (default 200m)
-    if (distance > maxDistanceMeters) {
-      return false;
-    }
-
-    // Verify commitment hasn't been tampered with
-    const reconstructedCommitment = this.generateSpatialCommitment(
-      userCoords.latitude,
-      userCoords.longitude,
-      {
-        challenge: 'dummy', // We don't have original, just checking geohash
-        epoch: 0,
-        validFrom: 0,
-        validUntil: 0,
-        meetingId: 'dummy'
-      }
-    );
-
-    // For actual verification, we'd need the original temporal challenge
-    // This is a simplified check
-    return commitment.geohash.length === 7;
+    return distance <= maxDistanceMeters;
   }
 
   /**
@@ -233,16 +221,14 @@ export class TSCBProtocol {
       .update(bindingData)
       .digest();
 
-    // Step 4: Sign using HMAC with the private key
-    const signature = crypto.createHmac('sha256', userPrivateKey)
-      .update(bindingHash)
-      .digest();
+    // Step 4: Sign with Ed25519 — private key is 64 bytes (seed || pubkey) from libsodium
+    const signatureBytes = sodium.crypto_sign_detached(bindingHash, userPrivateKey);
 
     return {
       temporalChallenge,
       spatialCommitment,
       bindingHash: bindingHash.toString('hex'),
-      signature: signature.toString('hex'),
+      signature: Buffer.from(signatureBytes).toString('hex'),
       timestamp,
       meetingId
     };
@@ -313,15 +299,17 @@ export class TSCBProtocol {
     }
     result.checks.binding = 'valid';
 
-    // Check 4: HMAC signature verification
-    const expectedSignature = crypto.createHmac('sha256', userPublicKey)
-      .update(expectedBindingHash)
-      .digest();
-    
-    const signatureValid = crypto.timingSafeEqual(
-      Buffer.from(proof.signature, 'hex'),
-      expectedSignature
-    );
+    // Check 4: Ed25519 signature verification
+    let signatureValid = false;
+    try {
+      signatureValid = sodium.crypto_sign_verify_detached(
+        Buffer.from(proof.signature, 'hex'),
+        expectedBindingHash,
+        userPublicKey
+      );
+    } catch {
+      signatureValid = false;
+    }
 
     if (!signatureValid) {
       result.checks.signature = 'invalid';
@@ -427,21 +415,33 @@ export class TSCBProtocol {
   }
 
   private geohashToCoordinates(geohash: string): { latitude: number; longitude: number } {
-    // Simplified decoding
+    const base32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+    let latRange = [-90.0, 90.0];
+    let lonRange = [-180.0, 180.0];
+    let isEven = true;
+
+    for (const char of geohash) {
+      const idx = base32.indexOf(char);
+      if (idx === -1) throw new Error(`Invalid geohash character: ${char}`);
+      for (let bitPos = 4; bitPos >= 0; bitPos--) {
+        const bitSet = (idx >> bitPos) & 1;
+        if (isEven) {
+          const mid = (lonRange[0] + lonRange[1]) / 2;
+          if (bitSet) lonRange[0] = mid;
+          else lonRange[1] = mid;
+        } else {
+          const mid = (latRange[0] + latRange[1]) / 2;
+          if (bitSet) latRange[0] = mid;
+          else latRange[1] = mid;
+        }
+        isEven = !isEven;
+      }
+    }
+
     return {
-      latitude: this.decodeGeohashLatitude(geohash),
-      longitude: this.decodeGeohashLongitude(geohash)
+      latitude: (latRange[0] + latRange[1]) / 2,
+      longitude: (lonRange[0] + lonRange[1]) / 2
     };
-  }
-
-  private decodeGeohashLatitude(geohash: string): number {
-    // Approximate center of geohash
-    return 0; // Simplified for demo
-  }
-
-  private decodeGeohashLongitude(geohash: string): number {
-    // Approximate center of geohash
-    return 0; // Simplified for demo
   }
 
   private ensureInitialized(): void {

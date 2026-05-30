@@ -1,0 +1,15 @@
+{
+  "name": "stamp_verify",
+  "version": "1.0.0",
+  "description": "Offline auditor CLI for STAMP attendance records",
+  "main": "verify.js",
+  "bin": {
+    "stamp_verify": "./verify.js"
+  },
+  "scripts": {
+    "verify": "node verify.js"
+  },
+  "dependencies": {
+    "libsodium-wrappers": "^0.7.13"
+  }
+}
