@@ -1,8 +1,34 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as crypto from 'crypto';
+import * as sodium from 'libsodium-wrappers';
 import { TSCBProtocol, TSCBProof } from '../crypto/TSCBProtocol';
 
 const protocol = new TSCBProtocol(process.env.TSCB_MASTER_KEY || 'default-master-key');
+
+// Server-managed Ed25519 signing keypair.
+// FACILITY_PRIVATE_KEY must be a 64-byte hex Ed25519 secret key (seed || pubkey).
+// Generate once with: node -e "const s=require('libsodium-wrappers');s.ready.then(()=>{const kp=s.crypto_sign_keypair();console.log('priv:',Buffer.from(kp.privateKey).toString('hex'));console.log('pub:',Buffer.from(kp.publicKey).toString('hex'));})"
+// The public key is the "facility key" used by stamp_verify auditors.
+let facilityPrivateKey: Uint8Array;
+let facilityPublicKey: Uint8Array;
+
+async function loadFacilityKeypair(): Promise<void> {
+  await sodium.ready;
+  const privHex = process.env.FACILITY_PRIVATE_KEY;
+  if (privHex && privHex.length === 128) {
+    facilityPrivateKey = Buffer.from(privHex, 'hex');
+    // Ed25519 secret key is seed(32) || pubkey(32); public key is the last 32 bytes
+    facilityPublicKey = facilityPrivateKey.slice(32);
+  } else {
+    // Ephemeral keypair for development — rotate on every restart, not suitable for production
+    const kp = sodium.crypto_sign_keypair();
+    facilityPrivateKey = kp.privateKey;
+    facilityPublicKey = kp.publicKey;
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FACILITY_PRIVATE_KEY must be set in production');
+    }
+  }
+}
 
 interface CheckinBody {
   participantToken: string;   // hex-encoded Ed25519 public key (pseudonymous ID)
@@ -16,10 +42,7 @@ interface CheckinBody {
 interface CheckoutBody {
   sessionId: string;
   participantToken: string;
-  latitude: number;
-  longitude: number;
-  timestamp: number;
-  signature: string;
+  signature: string;          // Ed25519 sig over (sessionId || serverCheckinTime), hex
 }
 
 // In-memory session store — replace with DatabaseService in production
@@ -28,12 +51,22 @@ const sessions = new Map<string, {
   participantToken: string;
   meetingId: string;
   checkinProof: TSCBProof;
-  checkinTime: number;
+  checkinTime: number;        // server wall-clock time at check-in (not client-supplied)
+  checkoutTime?: number;      // server wall-clock time at checkout
   status: 'active' | 'completed';
 }>();
 
 export async function checkinRoutes(fastify: FastifyInstance) {
   await protocol.initialize();
+  await loadFacilityKeypair();
+
+  // GET /api/facility-pubkey — auditors retrieve the facility public key out-of-band
+  fastify.get('/api/facility-pubkey', async (_request, reply) => {
+    return reply.code(200).send({
+      publicKey: Buffer.from(facilityPublicKey).toString('hex'),
+      algorithm: 'ed25519'
+    });
+  });
 
   // POST /api/checkin — client arrives at session, submits GPS + timestamp
   fastify.post<{ Body: CheckinBody }>('/api/checkin', {
@@ -54,7 +87,7 @@ export async function checkinRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest<{ Body: CheckinBody }>, reply: FastifyReply) => {
     const { participantToken, meetingId, latitude, longitude, timestamp, signature } = request.body;
 
-    // Verify timestamp is fresh (±2 minutes)
+    // Verify client timestamp is fresh (±2 minutes) — used only for TSCB epoch, not for duration
     const drift = Math.abs(Date.now() - timestamp);
     if (drift > 120000) {
       return reply.code(400).send({ error: 'Timestamp too old or in the future' });
@@ -69,8 +102,6 @@ export async function checkinRoutes(fastify: FastifyInstance) {
     ]);
     let sigValid = false;
     try {
-      const { default: sodium } = await import('libsodium-wrappers');
-      await sodium.ready;
       sigValid = sodium.crypto_sign_verify_detached(
         Buffer.from(signature, 'hex'),
         message,
@@ -83,32 +114,33 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       return reply.code(401).send({ error: 'Invalid participant signature' });
     }
 
-    // Generate TSCB proof server-side using the participant's public key as their identity
-    // The private key used here is the server's meeting key — the participant's public key
-    // is bound into the proof as the identity commitment, not used for signing.
-    // NOTE: In production, the client generates and signs the proof; server only verifies.
-    // For MVP we generate server-side to avoid shipping private keys to client.
-    const meetingKey = crypto.createHmac('sha256', Buffer.from(process.env.TSCB_MASTER_KEY || 'default-master-key', 'hex'))
-      .update(meetingId)
-      .digest();
-
+    // Generate TSCB proof signed by the facility's Ed25519 secret key.
+    // The facility public key is what stamp_verify auditors use to verify the signature.
     let proof: TSCBProof;
     try {
-      proof = await protocol.generateTSCBProof(meetingId, latitude, longitude, timestamp, meetingKey);
+      proof = await protocol.generateTSCBProof(
+        meetingId,
+        latitude,
+        longitude,
+        timestamp,
+        Buffer.from(facilityPrivateKey)
+      );
     } catch (err: any) {
       return reply.code(400).send({ error: err.message });
     }
 
-    // Attach participant identity hash (pseudonymous — not raw public key in production)
     const participantHash = crypto.createHash('sha256').update(publicKeyBytes).digest('hex');
 
+    // Use server wall-clock time for the authoritative check-in timestamp,
+    // not the client-supplied value, so clients cannot manipulate duration.
+    const serverCheckinTime = Date.now();
     const sessionId = crypto.randomUUID();
     sessions.set(sessionId, {
       sessionId,
       participantToken: participantHash,
       meetingId,
       checkinProof: proof,
-      checkinTime: timestamp,
+      checkinTime: serverCheckinTime,
       status: 'active'
     });
 
@@ -116,6 +148,7 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       sessionId,
       checkedIn: true,
       meetingId,
+      serverCheckinTime,
       epoch: proof.temporalChallenge.epoch,
       validUntil: proof.temporalChallenge.validUntil,
       geohash: proof.spatialCommitment.geohash,
@@ -128,19 +161,16 @@ export async function checkinRoutes(fastify: FastifyInstance) {
     schema: {
       body: {
         type: 'object',
-        required: ['sessionId', 'participantToken', 'latitude', 'longitude', 'timestamp', 'signature'],
+        required: ['sessionId', 'participantToken', 'signature'],
         properties: {
           sessionId: { type: 'string' },
           participantToken: { type: 'string' },
-          latitude: { type: 'number' },
-          longitude: { type: 'number' },
-          timestamp: { type: 'number' },
           signature: { type: 'string' }
         }
       }
     }
   }, async (request: FastifyRequest<{ Body: CheckoutBody }>, reply: FastifyReply) => {
-    const { sessionId, participantToken, latitude, longitude, timestamp, signature } = request.body;
+    const { sessionId, participantToken, signature } = request.body;
 
     const session = sessions.get(sessionId);
     if (!session) {
@@ -157,15 +187,14 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       return reply.code(403).send({ error: 'Token mismatch' });
     }
 
-    // Verify checkout signature
+    // Signature is over (sessionId || serverCheckinTime) — binds checkout to the specific
+    // server-recorded check-in time so the client cannot alter the duration baseline.
     const message = Buffer.concat([
       Buffer.from(sessionId),
-      Buffer.from(timestamp.toString())
+      Buffer.from(session.checkinTime.toString())
     ]);
     let sigValid = false;
     try {
-      const { default: sodium } = await import('libsodium-wrappers');
-      await sodium.ready;
       sigValid = sodium.crypto_sign_verify_detached(
         Buffer.from(signature, 'hex'),
         message,
@@ -178,10 +207,13 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       return reply.code(401).send({ error: 'Invalid participant signature' });
     }
 
-    const durationMs = timestamp - session.checkinTime;
+    // Use server wall-clock time for checkout — client cannot influence duration
+    const serverCheckoutTime = Date.now();
+    const durationMs = serverCheckoutTime - session.checkinTime;
     const durationMinutes = Math.floor(durationMs / 60000);
 
     session.status = 'completed';
+    session.checkoutTime = serverCheckoutTime;
 
     return reply.code(200).send({
       sessionId,
@@ -203,6 +235,7 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       meetingId: session.meetingId,
       status: session.status,
       checkinTime: session.checkinTime,
+      checkoutTime: session.checkoutTime,
       proof: session.checkinProof
     });
   });
