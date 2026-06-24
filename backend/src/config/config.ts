@@ -7,7 +7,7 @@ dotenvConfig();
 // Configuration schema with validation
 const configSchema = z.object({
   // Server configuration
-  NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
+  NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
   HOST: z.string().default('0.0.0.0'),
   API_HOST: z.string().default('localhost:3000'),

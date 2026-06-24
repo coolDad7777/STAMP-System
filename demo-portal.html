@@ -244,8 +244,7 @@
                                     </div>
                                     <div class="ml-4">
                                         <p class="text-sm text-gray-600">Total Verifications</p>
-                                        <p class="text-2xl font-bold text-gray-900">1,247</p>
-                                        <p class="text-sm text-green-600 font-medium">↗ +12%</p>
+                                        <p id="stat-verified" class="text-2xl font-bold text-gray-900">0</p>
                                     </div>
                                 </div>
                             </div>
@@ -259,8 +258,7 @@
                                     </div>
                                     <div class="ml-4">
                                         <p class="text-sm text-gray-600">Pending Reviews</p>
-                                        <p class="text-2xl font-bold text-gray-900">23</p>
-                                        <p class="text-sm text-red-600 font-medium">↘ -5%</p>
+                                        <p id="stat-pending" class="text-2xl font-bold text-gray-900">0</p>
                                     </div>
                                 </div>
                             </div>
@@ -274,8 +272,7 @@
                                     </div>
                                     <div class="ml-4">
                                         <p class="text-sm text-gray-600">Compliance Rate</p>
-                                        <p class="text-2xl font-bold text-gray-900">94.2%</p>
-                                        <p class="text-sm text-green-600 font-medium">↗ +2.1%</p>
+                                        <p id="stat-compliance" class="text-2xl font-bold text-gray-900">100%</p>
                                     </div>
                                 </div>
                             </div>
@@ -289,8 +286,7 @@
                                     </div>
                                     <div class="ml-4">
                                         <p class="text-sm text-gray-600">Active Participants</p>
-                                        <p class="text-2xl font-bold text-gray-900">342</p>
-                                        <p class="text-sm text-green-600 font-medium">↗ +8%</p>
+                                        <p id="stat-participants" class="text-2xl font-bold text-gray-900">0</p>
                                     </div>
                                 </div>
                             </div>
@@ -422,58 +418,7 @@
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <input type="checkbox" class="rounded">
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap font-mono text-sm">P-1234</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="font-medium text-gray-900">AA Meeting</div>
-                                                <div class="text-sm text-gray-500">2024-01-15</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm">60 minutes</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="inline-flex px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pending</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <button onclick="verifySingle(this)" class="text-blue-600 hover:text-blue-900 text-sm font-medium">Verify</button>
-                                            </td>
-                                        </tr>
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <input type="checkbox" class="rounded">
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap font-mono text-sm">P-5678</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="font-medium text-gray-900">NA Meeting</div>
-                                                <div class="text-sm text-gray-500">2024-01-15</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm">45 minutes</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="inline-flex px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pending</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <button onclick="verifySingle(this)" class="text-blue-600 hover:text-blue-900 text-sm font-medium">Verify</button>
-                                            </td>
-                                        </tr>
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="text-gray-400">—</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap font-mono text-sm">P-9012</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="font-medium text-gray-900">Group Therapy</div>
-                                                <div class="text-sm text-gray-500">2024-01-14</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm">55 minutes</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="inline-flex px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Invalid</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="text-gray-400 text-sm">—</span>
-                                            </td>
-                                        </tr>
+                                    <tbody id="verification-tbody" class="bg-white divide-y divide-gray-200">
                                     </tbody>
                                 </table>
                             </div>
@@ -514,6 +459,55 @@
         };
 
         let currentUser = null;
+        const API = '';
+
+        async function loadStats() {
+            try {
+                const res = await fetch(API + '/api/stats');
+                const stats = await res.json();
+                document.getElementById('stat-verified').textContent = stats.totalVerifications;
+                document.getElementById('stat-pending').textContent = stats.pendingReviews;
+                document.getElementById('stat-compliance').textContent = stats.complianceRate + '%';
+                document.getElementById('stat-participants').textContent = stats.activeParticipants;
+            } catch (e) {
+                console.warn('Stats API unavailable', e);
+            }
+        }
+
+        function statusBadge(status) {
+            if (status === 'verified') return '<span class="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Verified</span>';
+            if (status === 'invalid') return '<span class="inline-flex px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Invalid</span>';
+            if (status === 'pending') return '<span class="inline-flex px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pending</span>';
+            return '<span class="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Active</span>';
+        }
+
+        async function loadSessions() {
+            const tbody = document.getElementById('verification-tbody');
+            try {
+                const res = await fetch(API + '/api/sessions');
+                const data = await res.json();
+                const sessions = (data.sessions || []).filter(s => s.status !== 'active');
+                if (sessions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">No sessions yet. Clients check in at <a href="/client" class="text-blue-600">/client</a>.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = sessions.map(s => `
+                    <tr class="hover:bg-gray-50" data-session-id="${s.id}">
+                        <td class="px-6 py-4 whitespace-nowrap">${s.status === 'pending' ? `<input type="checkbox" class="rounded" value="${s.id}">` : '<span class="text-gray-400">—</span>'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap font-mono text-sm">${s.participantId}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="font-medium text-gray-900">${s.meetingType}</div>
+                            <div class="text-sm text-gray-500">${s.meetingDate} — ${s.meetingName || ''}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${Math.floor(s.duration / 60)} min</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge(s.status)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${s.status === 'pending' ? `<button onclick="verifySingle('${s.id}', this)" class="text-blue-600 hover:text-blue-900 text-sm font-medium">Verify</button>` : '<span class="text-gray-400 text-sm">—</span>'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-sm text-red-600">API unavailable — start backend with npm run dev:backend</td></tr>';
+            }
+        }
 
         // Login functions
         function loginAs(userType) {
@@ -546,6 +540,8 @@
             
             // Add fade-in animation
             document.getElementById('dashboard').classList.add('fade-in');
+            loadStats();
+            loadSessions();
         }
 
         function logout() {
@@ -586,55 +582,52 @@
                 activeNav.classList.add('nav-active');
                 activeNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
             }
+            if (pageName === 'verification' || pageName === 'dashboard') {
+                loadStats();
+                loadSessions();
+            }
+        }
+
+        async function verifySessionIds(ids) {
+            const res = await fetch(API + '/api/sessions/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionIds: ids })
+            });
+            if (!res.ok) throw new Error('Verify failed');
+            return res.json();
         }
 
         // Verification functions
-        function bulkVerify() {
-            const checkedBoxes = document.querySelectorAll('#page-verification input[type="checkbox"]:checked');
-            const count = checkedBoxes.length;
-            
-            if (count === 0) {
+        async function bulkVerify() {
+            const checkedBoxes = document.querySelectorAll('#verification-tbody input[type="checkbox"]:checked');
+            const ids = Array.from(checkedBoxes).map(cb => cb.value);
+            if (ids.length === 0) {
                 alert('Please select stamps to verify');
                 return;
             }
-            
-            // Simulate verification process
-            setTimeout(() => {
-                checkedBoxes.forEach(checkbox => {
-                    const row = checkbox.closest('tr');
-                    const statusCell = row.querySelector('span');
-                    const actionCell = row.querySelector('button');
-                    
-                    if (statusCell && statusCell.textContent === 'Pending') {
-                        statusCell.textContent = 'Verified';
-                        statusCell.className = 'inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full';
-                        if (actionCell) actionCell.textContent = '—';
-                        checkbox.disabled = true;
-                    }
-                });
-                
-                alert(`${count} stamps verified successfully!`);
-            }, 1000);
+            try {
+                const result = await verifySessionIds(ids);
+                await loadSessions();
+                await loadStats();
+                alert(`${result.verified} stamp(s) verified successfully!`);
+            } catch (e) {
+                alert('Verification failed — is the backend running?');
+            }
         }
 
-        function verifySingle(button) {
-            const row = button.closest('tr');
-            const statusCell = row.querySelector('span');
-            
-            // Simulate verification
+        async function verifySingle(sessionId, button) {
             button.textContent = 'Verifying...';
             button.disabled = true;
-            
-            setTimeout(() => {
-                statusCell.textContent = 'Verified';
-                statusCell.className = 'inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full';
-                button.textContent = '✓ Verified';
-                button.classList.add('text-green-600');
-                
-                // Disable checkbox
-                const checkbox = row.querySelector('input[type="checkbox"]');
-                if (checkbox) checkbox.disabled = true;
-            }, 1000);
+            try {
+                await verifySessionIds([sessionId]);
+                await loadSessions();
+                await loadStats();
+            } catch (e) {
+                button.textContent = 'Verify';
+                button.disabled = false;
+                alert('Verification failed');
+            }
         }
 
         // Utility functions

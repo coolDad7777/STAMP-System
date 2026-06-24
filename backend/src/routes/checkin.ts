@@ -121,9 +121,10 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       longitude,
       timestamp
     );
-    if (!locationCheck.ok) {
+    if (locationCheck.ok === false) {
       return reply.code(400).send({ error: locationCheck.error });
     }
+    const meeting = locationCheck.meeting;
 
     let proof;
     try {
@@ -148,8 +149,8 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       participantToken: participantHash,
       participantDisplay: participantDisplay(publicKeyBytes),
       meetingId,
-      meetingName: locationCheck.meeting.name,
-      meetingType: locationCheck.meeting.meetingType,
+      meetingName: meeting.name,
+      meetingType: meeting.meetingType,
       checkinProof: proof,
       checkinTime: serverCheckinTime,
       checkinGeohash: proof.spatialCommitment.geohash,
@@ -163,11 +164,11 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       sessionId,
       checkedIn: true,
       meetingId,
-      meetingName: locationCheck.meeting.name,
+      meetingName: meeting.name,
       serverCheckinTime,
       geohash: proof.spatialCommitment.geohash,
       bindingHash: proof.bindingHash,
-      minimumDurationMinutes: locationCheck.meeting.minimumDurationMinutes
+      minimumDurationMinutes: meeting.minimumDurationMinutes
     });
   });
 
@@ -203,9 +204,10 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       longitude,
       checkoutTime
     );
-    if (!locationCheck.ok) {
+    if (locationCheck.ok === false) {
       return reply.code(400).send({ error: locationCheck.error });
     }
+    const checkoutMeeting = locationCheck.meeting;
 
     let checkoutProof;
     try {
@@ -229,7 +231,7 @@ export async function checkinRoutes(fastify: FastifyInstance) {
 
     const durationMs = checkoutTime - session.checkinTime;
     const durationMinutes = Math.floor(durationMs / 60000);
-    const minMinutes = locationCheck.meeting.minimumDurationMinutes;
+    const minMinutes = checkoutMeeting.minimumDurationMinutes;
     const meetsMinimum = durationMs >= minMinutes * 60000;
 
     const completed = {

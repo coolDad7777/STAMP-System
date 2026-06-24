@@ -1,114 +1,48 @@
 import React from 'react';
-import { 
-  CheckCircleIcon, 
-  ExclamationIcon, 
-  ClockIcon,
-  ShieldCheckIcon
-} from '@heroicons/react/outline';
+import { CheckCircleIcon, ExclamationIcon, ClockIcon } from '@heroicons/react/outline';
 
-interface ActivityItem {
+interface RecentItem {
   id: string;
-  type: 'verification' | 'compliance' | 'audit' | 'alert';
-  title: string;
-  description: string;
-  timestamp: string;
-  status: 'success' | 'warning' | 'pending' | 'info';
-  participant?: string;
+  participantId: string;
+  meetingType: string;
+  meetingName: string;
+  status: string;
+  checkinTime: number;
 }
 
-const mockActivities: ActivityItem[] = [
-  {
-    id: '1',
-    type: 'verification',
-    title: 'Attendance Verified',
-    description: 'AA Meeting at Downtown Community Center',
-    timestamp: '5 minutes ago',
-    status: 'success',
-    participant: 'J.Smith',
-  },
-  {
-    id: '2',
-    type: 'compliance',
-    title: 'Compliance Alert',
-    description: 'Missed required meeting - automatic notification sent',
-    timestamp: '1 hour ago',
-    status: 'warning',
-    participant: 'M.Johnson',
-  },
-  {
-    id: '3',
-    type: 'verification',
-    title: 'Bulk Verification Completed',
-    description: '25 stamps verified for morning meetings',
-    timestamp: '2 hours ago',
-    status: 'success',
-  },
-  {
-    id: '4',
-    type: 'audit',
-    title: 'Cross-Jurisdiction Verification',
-    description: 'Federal probation verification request processed',
-    timestamp: '3 hours ago',
-    status: 'info',
-    participant: 'K.Williams',
-  },
-  {
-    id: '5',
-    type: 'verification',
-    title: 'Stamp Validation Failed',
-    description: 'Invalid cryptographic signature detected',
-    timestamp: '4 hours ago',
-    status: 'warning',
-    participant: 'R.Davis',
-  },
-];
+interface RecentActivityProps {
+  items?: RecentItem[];
+}
 
-function getActivityIcon(type: ActivityItem['type'], status: ActivityItem['status']) {
-  switch (type) {
-    case 'verification':
-      return status === 'success' ? CheckCircleIcon : ExclamationIcon;
-    case 'compliance':
-      return ExclamationIcon;
-    case 'audit':
-      return ShieldCheckIcon;
-    case 'alert':
-      return ClockIcon;
-    default:
-      return CheckCircleIcon;
+function statusColor(status: string) {
+  if (status === 'verified') return 'text-success-600 bg-success-100';
+  if (status === 'invalid') return 'text-danger-600 bg-danger-100';
+  if (status === 'completed') return 'text-warning-600 bg-warning-100';
+  return 'text-brand-600 bg-brand-100';
+}
+
+export function RecentActivity({ items = [] }: RecentActivityProps) {
+  if (items.length === 0) {
+    return <p className="text-sm text-gray-500">No recent sessions. Client check-ins appear here.</p>;
   }
-}
 
-function getStatusColor(status: ActivityItem['status']) {
-  switch (status) {
-    case 'success':
-      return 'text-success-600 bg-success-100';
-    case 'warning':
-      return 'text-warning-600 bg-warning-100';
-    case 'pending':
-      return 'text-brand-600 bg-brand-100';
-    case 'info':
-      return 'text-gray-600 bg-gray-100';
-    default:
-      return 'text-gray-600 bg-gray-100';
-  }
-}
-
-export function RecentActivity() {
   return (
     <div className="flow-root">
       <ul className="-mb-8">
-        {mockActivities.map((activity, activityIdx) => {
-          const Icon = getActivityIcon(activity.type, activity.status);
-          const colorClass = getStatusColor(activity.status);
-          
+        {items.map((item, idx) => {
+          const Icon =
+            item.status === 'verified'
+              ? CheckCircleIcon
+              : item.status === 'invalid'
+                ? ExclamationIcon
+                : ClockIcon;
+          const colorClass = statusColor(item.status);
+
           return (
-            <li key={activity.id}>
+            <li key={item.id}>
               <div className="relative pb-8">
-                {activityIdx !== mockActivities.length - 1 ? (
-                  <span
-                    className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                    aria-hidden="true"
-                  />
+                {idx !== items.length - 1 ? (
+                  <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true" />
                 ) : null}
                 <div className="relative flex space-x-3">
                   <div>
@@ -117,24 +51,15 @@ export function RecentActivity() {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div>
-                      <div className="text-sm">
-                        <span className="font-medium text-gray-900">
-                          {activity.title}
-                        </span>
-                        {activity.participant && (
-                          <span className="ml-2 text-gray-500">
-                            • {activity.participant}
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-sm text-gray-500">
-                        {activity.timestamp}
-                      </p>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-900">{item.meetingType}</span>
+                      <span className="ml-2 text-gray-500">• {item.participantId}</span>
                     </div>
-                    <div className="mt-2 text-sm text-gray-700">
-                      <p>{activity.description}</p>
-                    </div>
+                    <p className="mt-0.5 text-sm text-gray-500">
+                      {new Date(item.checkinTime).toLocaleString()}
+                    </p>
+                    <p className="mt-2 text-sm text-gray-700">{item.meetingName}</p>
+                    <p className="text-xs text-gray-500 mt-1 capitalize">{item.status}</p>
                   </div>
                 </div>
               </div>
