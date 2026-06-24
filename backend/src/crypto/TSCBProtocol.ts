@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
-import * as sodium from 'libsodium-wrappers';
 import { CryptoService } from './CryptoService';
+import { initSodium, getSodium } from './sodium';
 
 /**
  * Temporal-Spatial Cryptographic Binding (TSCB) Implementation
@@ -26,7 +26,7 @@ export class TSCBProtocol {
   }
 
   async initialize(): Promise<void> {
-    await sodium.ready;
+    await initSodium();
     await CryptoService.initialize();
     this.initialized = true;
   }
@@ -222,7 +222,7 @@ export class TSCBProtocol {
       .digest();
 
     // Step 4: Sign with Ed25519 — private key is 64 bytes (seed || pubkey) from libsodium
-    const signatureBytes = sodium.crypto_sign_detached(bindingHash, userPrivateKey);
+    const signatureBytes = getSodium().crypto_sign_detached(bindingHash, userPrivateKey);
 
     return {
       temporalChallenge,
@@ -302,7 +302,7 @@ export class TSCBProtocol {
     // Check 4: Ed25519 signature verification
     let signatureValid = false;
     try {
-      signatureValid = sodium.crypto_sign_verify_detached(
+      signatureValid = getSodium().crypto_sign_verify_detached(
         Buffer.from(proof.signature, 'hex'),
         expectedBindingHash,
         userPublicKey

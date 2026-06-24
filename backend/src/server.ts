@@ -8,6 +8,9 @@ import { CryptoService } from './crypto/CryptoService';
 import { GeohashService } from './services/GeohashService';
 import { tscbVerifyRoutes } from './routes/tscb-verify';
 import { checkinRoutes } from './routes/checkin';
+import { meetingRoutes } from './routes/meetings';
+import { sessionRoutes } from './routes/sessions';
+import { statsRoutes } from './routes/stats';
 
 const fastify = Fastify({
   logger: logger,
@@ -62,6 +65,9 @@ async function start() {
 
     await fastify.register(tscbVerifyRoutes);
     await fastify.register(checkinRoutes);
+    await fastify.register(meetingRoutes);
+    await fastify.register(sessionRoutes);
+    await fastify.register(statsRoutes);
 
     const address = await fastify.listen({
       port: config.PORT,

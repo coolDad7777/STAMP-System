@@ -1,45 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   CheckCircleIcon, 
   ExclamationIcon, 
   ClockIcon, 
-  TrendingUpIcon,
-  TrendingDownIcon,
   UsersIcon,
-  DocumentIcon,
   ShieldCheckIcon
 } from '@heroicons/react/outline';
 import { StatsCard } from '../components/ui/StatsCard';
 import { RecentActivity } from '../components/dashboard/RecentActivity';
 import { ComplianceChart } from '../components/dashboard/ComplianceChart';
 import { QuickActions } from '../components/dashboard/QuickActions';
-
-// Mock data - in real app this would come from API
-const mockStats = {
-  totalVerifications: { value: 1247, change: 12, trend: 'up' as const },
-  pendingReviews: { value: 23, change: -5, trend: 'down' as const },
-  complianceRate: { value: 94.2, change: 2.1, trend: 'up' as const },
-  activeParticipants: { value: 342, change: 8, trend: 'up' as const },
-};
-
-const mockAlerts = [
-  {
-    id: '1',
-    type: 'warning' as const,
-    title: 'Low compliance rate detected',
-    message: 'Participant J.Smith has missed 3 consecutive meetings',
-    timestamp: '2024-01-15T10:30:00Z',
-  },
-  {
-    id: '2',
-    type: 'info' as const,
-    title: 'System maintenance scheduled',
-    message: 'Scheduled maintenance window: Jan 20, 2:00-4:00 AM',
-    timestamp: '2024-01-15T09:15:00Z',
-  },
-];
+import { fetchStats, DashboardStats } from '../api/stats';
 
 export function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    fetchStats().then(setStats).catch(() => setStats(null));
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -54,36 +33,28 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Verifications"
-          value={mockStats.totalVerifications.value.toLocaleString()}
-          change={mockStats.totalVerifications.change}
-          trend={mockStats.totalVerifications.trend}
+          value={(stats?.totalVerifications ?? 0).toLocaleString()}
           icon={CheckCircleIcon}
           color="success"
         />
         
         <StatsCard
           title="Pending Reviews"
-          value={mockStats.pendingReviews.value.toString()}
-          change={mockStats.pendingReviews.change}
-          trend={mockStats.pendingReviews.trend}
+          value={(stats?.pendingReviews ?? 0).toString()}
           icon={ClockIcon}
           color="warning"
         />
         
         <StatsCard
           title="Compliance Rate"
-          value={`${mockStats.complianceRate.value}%`}
-          change={mockStats.complianceRate.change}
-          trend={mockStats.complianceRate.trend}
+          value={`${stats?.complianceRate ?? 100}%`}
           icon={ShieldCheckIcon}
           color="info"
         />
         
         <StatsCard
           title="Active Participants"
-          value={mockStats.activeParticipants.value.toString()}
-          change={mockStats.activeParticipants.change}
-          trend={mockStats.activeParticipants.trend}
+          value={(stats?.activeParticipants ?? 0).toString()}
           icon={UsersIcon}
           color="info"
         />
@@ -119,7 +90,7 @@ export function DashboardPage() {
               </p>
             </div>
             <div className="card-body">
-              <RecentActivity />
+              <RecentActivity items={stats?.recent} />
             </div>
           </div>
         </div>
@@ -147,32 +118,22 @@ export function DashboardPage() {
             </div>
             <div className="card-body">
               <div className="space-y-3">
-                {mockAlerts.map((alert) => (
+                {(stats?.recent ?? []).length === 0 ? (
+                  <p className="text-sm text-gray-500">No recent sessions yet.</p>
+                ) : (stats?.recent ?? []).map((item) => (
                   <div
-                    key={alert.id}
-                    className={`p-3 rounded-lg border-l-4 ${
-                      alert.type === 'warning'
-                        ? 'bg-warning-50 border-warning-400'
-                        : alert.type === 'info'
-                        ? 'bg-brand-50 border-brand-400'
-                        : 'bg-danger-50 border-danger-400'
-                    }`}
+                    key={item.id}
+                    className="p-3 rounded-lg border-l-4 bg-brand-50 border-brand-400"
                   >
                     <div className="flex items-start">
-                      {alert.type === 'warning' ? (
-                        <ExclamationIcon className="w-5 h-5 text-warning-600 mt-0.5" />
-                      ) : (
-                        <DocumentIcon className="w-5 h-5 text-brand-600 mt-0.5" />
-                      )}
-                      <div className="ml-3 flex-1">
-                        <h4 className="text-sm font-medium text-gray-900">
-                          {alert.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {alert.message}
+                      <ExclamationIcon className="w-5 h-5 text-brand-600 mt-0.5" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">
+                          {item.participantId} — {item.meetingType}
                         </p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          {new Date(alert.timestamp).toLocaleString()}
+                        <p className="text-sm text-gray-600">{item.meetingName}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(item.checkinTime).toLocaleString()} · {item.status}
                         </p>
                       </div>
                     </div>

@@ -1,0 +1,14 @@
+{
+  "meetings": [
+    {
+      "id": "meeting_iop_demo_001",
+      "name": "Riverside IOP — Afternoon Group",
+      "meetingType": "IOP Outpatient",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "geohash": "dr5regw",
+      "minimumDurationMinutes": 0,
+      "isActive": true
+    }
+  ]
+}

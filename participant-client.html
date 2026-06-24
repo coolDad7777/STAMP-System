@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAMP — Client Check-In</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-900">
+  <div class="max-w-lg mx-auto p-6 space-y-6">
+    <header>
+      <h1 class="text-2xl font-bold">STAMP Client</h1>
+      <p class="text-sm text-slate-600">Outpatient / IOP attendance check-in</p>
+      <p id="participant-id" class="text-xs font-mono text-slate-500 mt-2"></p>
+    </header>
+
+    <section class="bg-white rounded-xl shadow p-4 space-y-3">
+      <h2 class="font-semibold">1. Select session</h2>
+      <select id="meeting-select" class="w-full border rounded-lg p-2"></select>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" id="demo-location" checked />
+        Use demo location (for testing away from facility)
+      </label>
+      <button id="refresh-qr" class="text-sm text-blue-600">Refresh facility QR challenge</button>
+      <pre id="qr-display" class="text-xs bg-slate-100 p-2 rounded overflow-x-auto"></pre>
+    </section>
+
+    <section class="bg-white rounded-xl shadow p-4 space-y-3">
+      <h2 class="font-semibold">2. Check in / out</h2>
+      <p id="session-status" class="text-sm text-slate-600">No active session</p>
+      <div class="flex gap-2">
+        <button id="checkin-btn" class="flex-1 bg-green-600 text-white rounded-lg py-3 font-medium">Check In</button>
+        <button id="checkout-btn" class="flex-1 bg-blue-600 text-white rounded-lg py-3 font-medium" disabled>Check Out</button>
+      </div>
+      <pre id="result" class="text-xs bg-slate-100 p-2 rounded overflow-x-auto whitespace-pre-wrap"></pre>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.11/dist/browsers/sodium.js"></script>
+  <script>
+    const API = '';
+    let sodium, keyPair, activeSession = null, qrPayload = null, meetings = [];
+
+    function log(obj) {
+      document.getElementById('result').textContent = JSON.stringify(obj, null, 2);
+    }
+
+    async function initKeys() {
+      await sodium.ready;
+      const stored = localStorage.getItem('stamp_client_keys');
+      if (stored) {
+        const { publicKey, privateKey } = JSON.parse(stored);
+        keyPair = {
+          publicKey: sodium.from_hex(publicKey),
+          privateKey: sodium.from_hex(privateKey)
+        };
+      } else {
+        keyPair = sodium.crypto_sign_keypair();
+        localStorage.setItem('stamp_client_keys', JSON.stringify({
+          publicKey: sodium.to_hex(keyPair.publicKey),
+          privateKey: sodium.to_hex(keyPair.privateKey)
+        }));
+      }
+      document.getElementById('participant-id').textContent =
+        'Participant key: ' + sodium.to_hex(keyPair.publicKey).slice(0, 16) + '...';
+    }
+
+    async function loadMeetings() {
+      const sel = document.getElementById('meeting-select');
+      try {
+        const res = await fetch(API + '/api/meetings');
+        const data = await res.json();
+        meetings = data.meetings || [];
+        if (meetings.length === 0) {
+          sel.innerHTML = '<option value="">No meetings configured</option>';
+          return;
+        }
+        sel.innerHTML = meetings.map(m =>
+          `<option value="${m.id}">${m.meetingType} — ${m.name}</option>`
+        ).join('');
+        await refreshQr();
+      } catch (e) {
+        sel.innerHTML = '<option value="">API unavailable</option>';
+        log({ error: 'Cannot load meetings — is backend running?' });
+      }
+    }
+
+    async function refreshQr() {
+      const meetingId = document.getElementById('meeting-select').value;
+      if (!meetingId) return;
+      const res = await fetch(API + `/api/meetings/${meetingId}/qr`);
+      qrPayload = await res.json();
+      document.getElementById('qr-display').textContent = JSON.stringify(qrPayload, null, 2);
+    }
+
+    function selectedMeeting() {
+      return meetings.find(m => m.id === document.getElementById('meeting-select').value);
+    }
+
+    async function getCoords() {
+      const meeting = selectedMeeting();
+      if (document.getElementById('demo-location').checked && meeting) {
+        return { latitude: meeting.latitude, longitude: meeting.longitude };
+      }
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          p => resolve({ latitude: p.coords.latitude, longitude: p.coords.longitude }),
+          err => reject(err),
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    }
+
+    function sign(message) {
+      const sig = sodium.crypto_sign_detached(message, keyPair.privateKey);
+      return sodium.to_hex(sig);
+    }
+
+    async function checkIn() {
+      const meeting = selectedMeeting();
+      if (!meeting) return alert('Select a meeting');
+      const { latitude, longitude } = await getCoords();
+      const timestamp = Date.now();
+      const meetingId = meeting.id;
+      const message = new TextEncoder().encode(meetingId + timestamp);
+      const body = {
+        participantToken: sodium.to_hex(keyPair.publicKey),
+        meetingId,
+        latitude,
+        longitude,
+        timestamp,
+        signature: sign(message),
+        qrChallenge: qrPayload?.challenge,
+        qrEpoch: qrPayload?.epoch
+      };
+      const res = await fetch(API + '/api/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) return log({ error: data.error || data });
+      activeSession = data;
+      localStorage.setItem('stamp_active_session', JSON.stringify(data));
+      document.getElementById('session-status').textContent =
+        `Checked in to ${data.meetingName}. Min duration: ${data.minimumDurationMinutes} min`;
+      document.getElementById('checkout-btn').disabled = false;
+      log(data);
+    }
+
+    async function checkOut() {
+      const stored = activeSession || JSON.parse(localStorage.getItem('stamp_active_session') || 'null');
+      if (!stored?.sessionId) return alert('No active session');
+      const { latitude, longitude } = await getCoords();
+      const message = new TextEncoder().encode(stored.sessionId + stored.serverCheckinTime);
+      const body = {
+        sessionId: stored.sessionId,
+        participantToken: sodium.to_hex(keyPair.publicKey),
+        latitude,
+        longitude,
+        signature: sign(message)
+      };
+      const res = await fetch(API + '/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) return log({ error: data.error || data });
+      activeSession = null;
+      localStorage.removeItem('stamp_active_session');
+      document.getElementById('session-status').textContent = 'Session complete — PO can verify';
+      document.getElementById('checkout-btn').disabled = true;
+      log(data);
+    }
+
+    document.getElementById('checkin-btn').onclick = () => checkIn().catch(e => log({ error: String(e) }));
+    document.getElementById('checkout-btn').onclick = () => checkOut().catch(e => log({ error: String(e) }));
+    document.getElementById('refresh-qr').onclick = () => refreshQr().catch(e => log({ error: String(e) }));
+    document.getElementById('meeting-select').onchange = () => refreshQr();
+
+    (async () => {
+      sodium = window.sodium;
+      await initKeys();
+      await loadMeetings();
+      const saved = localStorage.getItem('stamp_active_session');
+      if (saved) {
+        activeSession = JSON.parse(saved);
+        document.getElementById('session-status').textContent =
+          `Active session ${activeSession.sessionId}`;
+        document.getElementById('checkout-btn').disabled = false;
+      }
+    })();
+  </script>
+</body>
+</html>

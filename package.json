@@ -13,6 +13,8 @@
     "setup:db": "docker-compose up -d postgres redis && sleep 10 && npm run db:migrate",
     "setup:keys": "node scripts/generate-dev-keys.js",
     "dev:backend": "npm run dev --workspace=backend",
+    "dev:demo": "node serve.js",
+    "dev:stack": "bash scripts/dev-stack.sh",
     "dev:portal": "npm run dev --workspace=validator-portal",
     "dev:mobile": "npm run start --workspace=mobile",
     "build:all": "npm run build --workspace=backend && npm run build --workspace=validator-portal",
