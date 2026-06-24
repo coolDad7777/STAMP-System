@@ -5,30 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>STAMP Facility QR</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body class="bg-gray-900 min-h-screen flex items-center justify-center text-white">
-  <div class="text-center space-y-6 p-8">
+  <div class="text-center space-y-6 p-8 max-w-lg">
     <h1 class="text-3xl font-bold">Scan to Check In</h1>
     <p id="meeting-name" class="text-blue-200"></p>
-    <canvas id="qr" class="mx-auto bg-white p-4 rounded-xl"></canvas>
+    <div id="qr" class="mx-auto bg-white p-4 rounded-xl inline-block"></div>
     <p id="expires" class="text-sm text-gray-400"></p>
+    <pre id="payload" class="text-xs text-left bg-gray-800 p-3 rounded overflow-x-auto"></pre>
     <p class="text-xs text-gray-500">QR rotates every 30 seconds — prevents replay</p>
   </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     const meetingId = new URLSearchParams(location.search).get('meeting') || 'meeting_iop_demo_001';
+    let qrInstance = null;
 
     async function refresh() {
       const res = await fetch('/api/meetings/' + meetingId + '/qr');
       const payload = await res.json();
+      if (!res.ok) {
+        document.getElementById('meeting-name').textContent = payload.error || 'Failed to load';
+        return;
+      }
       document.getElementById('meeting-name').textContent = payload.meetingName + ' (' + payload.meetingType + ')';
       document.getElementById('expires').textContent =
         'Valid until ' + new Date(payload.validUntil).toLocaleTimeString();
-      await QRCode.toCanvas(document.getElementById('qr'), JSON.stringify(payload), { width: 280 });
+      document.getElementById('payload').textContent = JSON.stringify(payload, null, 2);
+
+      const el = document.getElementById('qr');
+      el.innerHTML = '';
+      qrInstance = new QRCode(el, {
+        text: JSON.stringify(payload),
+        width: 256,
+        height: 256,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
     }
 
-    refresh();
-    setInterval(refresh, 25000);
+    refresh().catch(err => {
+      document.getElementById('meeting-name').textContent = 'Error: ' + err.message;
+    });
+    setInterval(() => refresh().catch(console.error), 25000);
   </script>
 </body>
 </html>

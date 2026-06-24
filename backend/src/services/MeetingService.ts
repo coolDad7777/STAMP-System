@@ -48,17 +48,22 @@ class MeetingServiceClass {
       }));
       this.store.write({ meetings });
     } else {
-      // Backfill geohash for legacy seed rows
       const meetings = data.meetings.map((m) => {
-        if (m.geohash) return m;
-        return {
-          ...m,
-          geohash: protocol.generateSpatialCommitment(
-            m.latitude,
-            m.longitude,
-            protocol.generateTemporalChallenge(m.id, Date.now())
-          ).geohash
-        };
+        let updated = m;
+        if (!m.geohash) {
+          updated = {
+            ...m,
+            geohash: protocol.generateSpatialCommitment(
+              m.latitude,
+              m.longitude,
+              protocol.generateTemporalChallenge(m.id, Date.now())
+            ).geohash
+          };
+        }
+        if (m.minimumDurationMinutes < 1) {
+          updated = { ...updated, minimumDurationMinutes: 1 };
+        }
+        return updated;
       });
       this.store.write({ meetings });
     }
