@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const port = 3002;
+const port = Number(process.env.PORT) || 4747;
 
 const server = http.createServer((req, res) => {
     console.log(`Request for: ${req.url}`);
@@ -34,7 +34,7 @@ const server = http.createServer((req, res) => {
     });
 });
 
-server.listen(port, 'localhost', () => {
+server.listen(port, '0.0.0.0', () => {
     console.log(`🚀 STAMP Demo Server running at http://localhost:${port}/`);
     console.log(`📱 Open: http://localhost:${port}/demo-portal.html`);
     console.log('');
