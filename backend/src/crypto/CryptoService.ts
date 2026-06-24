@@ -14,7 +14,7 @@ export class CryptoService {
       this.initialized = true;
       logger.info('CryptoService initialized (stub mode)');
     } catch (error) {
-      logger.error('Failed to initialize CryptoService', error);
+      logger.error({ error }, 'Failed to initialize CryptoService');
     }
   }
 

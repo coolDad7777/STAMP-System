@@ -4,7 +4,7 @@
   "description": "STAMP Validator Portal - Web interface for probation officers and court personnel",
   "private": true,
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 3000",
+    "dev": "vite --host 0.0.0.0 --port 3001",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
@@ -20,6 +20,7 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^6.14.2",
     "@tanstack/react-query": "^4.29.25",
     "@tanstack/react-router": "^0.0.1-beta.138",
     "zustand": "^4.4.1",

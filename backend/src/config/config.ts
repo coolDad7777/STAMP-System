@@ -14,20 +14,21 @@ const configSchema = z.object({
   ALLOWED_ORIGINS: z.string().default('http://localhost:3001,http://localhost:3000'),
 
   // Database configuration
-  DATABASE_URL: z.string(),
+  DATABASE_URL: z.string().default('postgres://stamp_user:secure_dev_password@localhost:5432/stamp_dev'),
   DB_POOL_SIZE: z.coerce.number().default(20),
   DB_TIMEOUT: z.coerce.number().default(30000),
   DB_SSL: z.coerce.boolean().default(false),
 
   // Redis configuration
-  REDIS_URL: z.string(),
+  REDIS_URL: z.string().default('redis://localhost:6379'),
   REDIS_PASSWORD: z.string().optional(),
   REDIS_DB: z.coerce.number().default(0),
   REDIS_TTL: z.coerce.number().default(3600), // 1 hour
 
   // Cryptography configuration
-  JWT_SECRET: z.string().min(32),
-  ENCRYPTION_KEY: z.string().length(32),
+  JWT_SECRET: z.string().min(32).default('dev_jwt_secret_32_characters_long_change_in_production'),
+  ENCRYPTION_KEY: z.string().length(32).default('dev_encryption_key_32_bytes_long'),
+  TSCB_MASTER_KEY: z.string().default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
   HSM_PKCS11_LIB: z.string().optional(),
   HSM_SLOT: z.coerce.number().default(0),
   HSM_PIN: z.string().optional(),

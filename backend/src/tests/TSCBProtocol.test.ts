@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from '@jest/globals';
-import { TSCBProtocol, TemporalChallenge, TSCBProof } from '../src/crypto/TSCBProtocol';
-import * as sodium from 'libsodium-wrappers';
+import { TSCBProtocol, TemporalChallenge, TSCBProof } from '../crypto/TSCBProtocol';
+import { initSodium, getSodium } from '../crypto/sodium';
 
 /**
  * TSCB Protocol Security Tests
@@ -23,7 +23,8 @@ describe('TSCB Protocol Security Tests', () => {
   const MEETING_LOCATION = { lat: 40.7128, lng: -74.0060 }; // NYC
 
   beforeAll(async () => {
-    await sodium.ready;
+    await initSodium();
+    const sodium = getSodium();
     
     protocol = new TSCBProtocol(MASTER_KEY);
     await protocol.initialize();
@@ -362,7 +363,8 @@ describe('Attack Scenario Tests', () => {
   const MASTER_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
   beforeAll(async () => {
-    await sodium.ready;
+    await initSodium();
+    const sodium = getSodium();
     protocol = new TSCBProtocol(MASTER_KEY);
     await protocol.initialize();
     
@@ -406,6 +408,7 @@ describe('Attack Scenario Tests', () => {
   });
 
   it('should prevent collusion attacks (multiple users same device)', async () => {
+    const sodium = getSodium();
     // Two users try to share the same device
     const user1Keypair = sodium.crypto_sign_keypair();
     const user2Keypair = sodium.crypto_sign_keypair();

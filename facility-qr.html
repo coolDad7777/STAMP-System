@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAMP Facility QR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-900 min-h-screen flex items-center justify-center text-white">
+  <div class="text-center space-y-6 p-8">
+    <h1 class="text-3xl font-bold">Scan to Check In</h1>
+    <p id="meeting-name" class="text-blue-200"></p>
+    <canvas id="qr" class="mx-auto bg-white p-4 rounded-xl"></canvas>
+    <p id="expires" class="text-sm text-gray-400"></p>
+    <p class="text-xs text-gray-500">QR rotates every 30 seconds — prevents replay</p>
+  </div>
+  <script>
+    const meetingId = new URLSearchParams(location.search).get('meeting') || 'meeting_iop_demo_001';
+
+    async function refresh() {
+      const res = await fetch('/api/meetings/' + meetingId + '/qr');
+      const payload = await res.json();
+      document.getElementById('meeting-name').textContent = payload.meetingName + ' (' + payload.meetingType + ')';
+      document.getElementById('expires').textContent =
+        'Valid until ' + new Date(payload.validUntil).toLocaleTimeString();
+      await QRCode.toCanvas(document.getElementById('qr'), JSON.stringify(payload), { width: 280 });
+    }
+
+    refresh();
+    setInterval(refresh, 25000);
+  </script>
+</body>
+</html>

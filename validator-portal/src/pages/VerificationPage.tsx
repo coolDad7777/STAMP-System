@@ -1,55 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircleIcon, ExclamationIcon, UploadIcon } from '@heroicons/react/outline';
 import toast from 'react-hot-toast';
-
-interface AttendanceStamp {
-  id: string;
-  participantId: string;
-  meetingDate: string;
-  meetingType: string;
-  duration: number;
-  locationVerified: boolean;
-  cryptographicSignature: string;
-  status: 'pending' | 'verified' | 'invalid';
-}
-
-const mockStamps: AttendanceStamp[] = [
-  {
-    id: 'stamp_001',
-    participantId: 'P-1234',
-    meetingDate: '2024-01-15',
-    meetingType: 'AA Meeting',
-    duration: 3600, // seconds
-    locationVerified: true,
-    cryptographicSignature: 'ed25519:a7b9c8d2e...',
-    status: 'pending',
-  },
-  {
-    id: 'stamp_002',
-    participantId: 'P-5678',
-    meetingDate: '2024-01-15',
-    meetingType: 'NA Meeting',
-    duration: 2700,
-    locationVerified: true,
-    cryptographicSignature: 'ed25519:f3e1d4a5b...',
-    status: 'pending',
-  },
-  {
-    id: 'stamp_003',
-    participantId: 'P-9012',
-    meetingDate: '2024-01-14',
-    meetingType: 'Group Therapy',
-    duration: 3300,
-    locationVerified: false,
-    cryptographicSignature: 'ed25519:invalid_sig',
-    status: 'invalid',
-  },
-];
+import { fetchSessions, verifySessions, ValidatorStamp } from '../api/sessions';
 
 export function VerificationPage() {
-  const [stamps, setStamps] = useState<AttendanceStamp[]>(mockStamps);
+  const [stamps, setStamps] = useState<ValidatorStamp[]>([]);
   const [selectedStamps, setSelectedStamps] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadStamps = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const sessions = await fetchSessions();
+      setStamps(sessions.filter((s) => s.status !== 'active'));
+    } catch {
+      toast.error('Could not load sessions from API — is the backend running?');
+      setStamps([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStamps();
+  }, [loadStamps]);
 
   const handleSelectAll = () => {
     if (selectedStamps.length === stamps.filter(s => s.status === 'pending').length) {
@@ -76,19 +51,10 @@ export function VerificationPage() {
     setIsProcessing(true);
     
     try {
-      // Simulate verification process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setStamps(prev => 
-        prev.map(stamp => 
-          selectedStamps.includes(stamp.id)
-            ? { ...stamp, status: 'verified' as const }
-            : stamp
-        )
-      );
-      
+      const count = await verifySessions(selectedStamps);
+      await loadStamps();
       setSelectedStamps([]);
-      toast.success(`${selectedStamps.length} stamps verified successfully`);
+      toast.success(`${count} stamp(s) verified successfully`);
     } catch (error) {
       toast.error('Verification failed');
     } finally {
@@ -100,17 +66,9 @@ export function VerificationPage() {
     setIsProcessing(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setStamps(prev => 
-        prev.map(stamp => 
-          stamp.id === stampId
-            ? { ...stamp, status: 'verified' as const }
-            : stamp
-        )
-      );
-      
-      toast.success('Stamp verified successfully');
+      const count = await verifySessions([stampId]);
+      await loadStamps();
+      toast.success(count ? 'Stamp verified successfully' : 'Stamp could not be verified');
     } catch (error) {
       toast.error('Verification failed');
     } finally {
@@ -118,7 +76,7 @@ export function VerificationPage() {
     }
   };
 
-  const getStatusBadge = (status: AttendanceStamp['status']) => {
+  const getStatusBadge = (status: ValidatorStamp['status']) => {
     switch (status) {
       case 'verified':
         return <span className="badge-success">Verified</span>;
@@ -213,9 +171,17 @@ export function VerificationPage() {
         <div className="card-header">
           <h3 className="text-lg font-medium text-gray-900">Attendance Stamps</h3>
           <p className="text-sm text-gray-500">
-            Review and verify submitted attendance stamps
+            Live sessions from the STAMP backend API
           </p>
         </div>
+
+        {isLoading ? (
+          <div className="p-8 text-center text-gray-500">Loading sessions...</div>
+        ) : stamps.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            No completed sessions yet. Clients check in at <code>/client</code>.
+          </div>
+        ) : (
         
         <div className="overflow-hidden">
           <table className="table">
@@ -290,6 +256,7 @@ export function VerificationPage() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,60 @@
+{
+  "sessions": [
+    {
+      "sessionId": "63f11d00-6857-4fca-bdba-1a92e3e34baf",
+      "participantToken": "0fbf3289f062b0c73ec84719ec37707d020e7bfedbaad99fc64a04b498d5f29f",
+      "participantDisplay": "P-0fbf3289",
+      "meetingId": "meeting_iop_demo_001",
+      "meetingName": "Riverside IOP — Afternoon Group",
+      "meetingType": "IOP Outpatient",
+      "checkinProof": {
+        "temporalChallenge": {
+          "challenge": "f397f6a55fc9cd556765ff80e0fc400ce0fb3a955455de3448ffff04a3dbe442",
+          "epoch": 59409185,
+          "validFrom": 1782275550000,
+          "validUntil": 1782275580000,
+          "meetingId": "meeting_iop_demo_001"
+        },
+        "spatialCommitment": {
+          "geohash": "dr5regw",
+          "precision": 7,
+          "commitment": "9b3e90026de8238a4741c797ea3e661296904850d11c73c8ec93d25e7d880d13",
+          "latitudeApprox": 40.71327209472656,
+          "longitudeApprox": -74.00596618652344
+        },
+        "bindingHash": "4bc1c6605e1c99c4243de673c1c7a19dd0ef6642559aabb7b8f7481044090baf",
+        "signature": "d6040ab6e7aae9ae72a64eb25997f1129a0c89545347511c89a01327db516a04aca6ed871e9721b25a7ef4d030263db6794db5e52772f0689236ac1e8453830c",
+        "timestamp": 1782275570526,
+        "meetingId": "meeting_iop_demo_001"
+      },
+      "checkinTime": 1782275570533,
+      "checkinGeohash": "dr5regw",
+      "status": "completed",
+      "locationVerified": true,
+      "checkoutProof": {
+        "temporalChallenge": {
+          "challenge": "f397f6a55fc9cd556765ff80e0fc400ce0fb3a955455de3448ffff04a3dbe442",
+          "epoch": 59409185,
+          "validFrom": 1782275550000,
+          "validUntil": 1782275580000,
+          "meetingId": "meeting_iop_demo_001"
+        },
+        "spatialCommitment": {
+          "geohash": "dr5regw",
+          "precision": 7,
+          "commitment": "9b3e90026de8238a4741c797ea3e661296904850d11c73c8ec93d25e7d880d13",
+          "latitudeApprox": 40.71327209472656,
+          "longitudeApprox": -74.00596618652344
+        },
+        "bindingHash": "4bc1c6605e1c99c4243de673c1c7a19dd0ef6642559aabb7b8f7481044090baf",
+        "signature": "d6040ab6e7aae9ae72a64eb25997f1129a0c89545347511c89a01327db516a04aca6ed871e9721b25a7ef4d030263db6794db5e52772f0689236ac1e8453830c",
+        "timestamp": 1782275570537,
+        "meetingId": "meeting_iop_demo_001"
+      },
+      "checkoutTime": 1782275570537,
+      "checkoutGeohash": "dr5regw",
+      "durationMinutes": 0,
+      "meetsMinimum": true
+    }
+  ]
+}
