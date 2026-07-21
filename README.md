@@ -2,14 +2,24 @@
 
 ## Overview
 
-STAMP revolutionizes court-mandated attendance verification by replacing forgeable paper cards with cryptographically secure, privacy-preserving digital stamps. The system uses dual-lock geohash verification where users must physically check-in AND check-out from meeting locations to generate unforgeable proof-of-presence tokens.
+STAMP is a prototype court-mandated attendance verification system that replaces forgeable paper cards with privacy-preserving digital attendance records. The current working core focuses on temporal-spatial cryptographic binding: users check in and check out from meeting locations, and the system produces signed proof-of-presence records that can be independently verified.
 
-## Key Innovations
+## Current Scope
 
-1. **Temporal-Spatial Cryptographic Binding (TSCB)** - Mathematically binds attendance proofs to specific time windows and geographic boundaries
-2. **Differential Privacy Analytics** - Enables aggregate reporting without accessing individual data
-3. **Decentralized Cross-Jurisdiction Verification** - Blockchain-based trust network for multi-jurisdictional compliance
-4. **AI-Powered Behavioral Consistency** - Privacy-preserving fraud detection using federated learning
+This repository is in prototype stabilization. The working target is a practical vertical slice:
+
+1. A participant checks in with a pseudonymous Ed25519 key, current timestamp, and location.
+2. The backend verifies key ownership and creates a server-side session.
+3. The participant checks out against the same session.
+4. The backend reports duration using server time, not client-supplied time.
+5. A verifier can check signed TSCB attendance records.
+
+## Key Concepts
+
+1. **Temporal-Spatial Cryptographic Binding (TSCB)** - Binds attendance proofs to time windows and geographic boundaries.
+2. **Pseudonymous participant keys** - Participants prove key ownership without putting a legal name into the proof itself.
+3. **Server-authoritative duration** - Check-in and check-out duration uses server wall-clock time.
+4. **Offline verification path** - The `stamp_verify` CLI can audit attendance records independently.
 
 ## Architecture
 
@@ -38,61 +48,70 @@ stamp-system/
 ├── backend/                 # Node.js/TypeScript API services
 ├── mobile/                  # React Native mobile application
 ├── validator-portal/        # React web application for validators
-├── blockchain/              # Smart contracts for cross-jurisdiction verification
-├── infrastructure/          # Docker, Kubernetes, Terraform configurations
-├── database/               # PostgreSQL schemas, migrations, seeds
-└── docs/                   # Architecture, API, and compliance documentation
+├── blockchain/              # Experimental smart contract materials
+├── database/                # PostgreSQL schemas, migrations, seeds
+├── stamp_verify/            # Offline verification CLI
+└── docs/                    # Architecture, API, and compliance documentation
 ```
 
 ## Quick Start
 
 ### Prerequisites
+
 - Node.js 20+ LTS
-- PostgreSQL 15+
-- Redis 7+
-- Docker & Docker Compose
-- React Native CLI (for mobile development)
+- npm 9+
+- Optional: PostgreSQL 15+ and Redis 7+ for non-mock local services
 
 ### Development Setup
 
-1. **Clone and setup**
+1. **Install dependencies**
+
    ```bash
-   git clone <repository-url>
-   cd stamp-system
    npm run setup:dev
    ```
 
-2. **Start services**
+2. **Run the backend**
+
    ```bash
-   docker-compose up -d  # Database, Redis, HSM simulator
-   npm run dev:backend   # API services
-   npm run dev:portal    # Validator portal
+   npm run dev:backend
    ```
 
-3. **Mobile development**
+   The backend now has development defaults. If PostgreSQL is unavailable, it falls back to mock database mode.
+
+3. **Run the validator portal**
+
    ```bash
-   cd mobile
-   npm install
-   npx react-native run-ios     # iOS simulator
-   npx react-native run-android # Android emulator
+   npm run dev:portal
    ```
 
-## Security Features
+4. **Run the static demo portal**
 
-- **End-to-end encryption** with AES-256-GCM
-- **Zero-knowledge proofs** for cross-jurisdiction verification
-- **Hardware security modules** for key management
-- **Constant-time cryptography** to prevent timing attacks
-- **Multi-factor authentication** for all validators
-- **Immutable audit trails** with hash chain verification
+   ```bash
+   npm run dev:demo
+   ```
 
-## Compliance
+   Then open `http://localhost:3002/demo-portal.html`.
 
-- ✅ HIPAA Title II compliance
-- ✅ SOC 2 Type II controls
-- ✅ GDPR privacy-by-design
-- ✅ 4th Amendment protections
-- ✅ CCPA privacy rights
+5. **Run backend tests**
+
+   ```bash
+   npm run test:backend
+   ```
+
+## Security Features Under Development
+
+- Ed25519 signing for proof verification
+- HMAC-backed time challenges
+- Precision-7 geohash location commitment
+- Server-authoritative session duration
+- Constant-time hash comparison where applicable
+- Pseudonymous participant identifiers
+
+## Compliance Status
+
+STAMP is **not yet certified or audited** for HIPAA, SOC 2, GDPR, CCPA, court-system deployment, or law-enforcement deployment. Those are product requirements and review targets, not completed compliance claims.
+
+Before production or government use, STAMP needs legal review, security review, privacy-impact review, documented policies, audit controls, data-retention rules, incident response procedures, and any required third-party assessments.
 
 ## License
 
