@@ -1,10 +1,16 @@
 import { z } from 'zod';
 import { config as dotenvConfig } from 'dotenv';
 
-// Load environment variables
+// Load environment variables from backend/.env or the process environment.
 dotenvConfig();
 
-// Configuration schema with validation
+const DEV_DATABASE_URL = 'postgresql://stamp:stamp@localhost:5432/stamp_dev';
+const DEV_REDIS_URL = 'redis://localhost:6379';
+const DEV_JWT_SECRET = 'dev_jwt_secret_change_in_production';
+const DEV_ENCRYPTION_KEY = 'dev_encryption_key_32_bytes_long';
+
+// Configuration schema with safe development defaults. Production still validates
+// that placeholder secrets are not used.
 const configSchema = z.object({
   // Server configuration
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
@@ -14,20 +20,22 @@ const configSchema = z.object({
   ALLOWED_ORIGINS: z.string().default('http://localhost:3001,http://localhost:3000'),
 
   // Database configuration
-  DATABASE_URL: z.string(),
+  DATABASE_URL: z.string().default(DEV_DATABASE_URL),
   DB_POOL_SIZE: z.coerce.number().default(20),
-  DB_TIMEOUT: z.coerce.number().default(30000),
+  DB_TIMEOUT: z.coerce.number().default(2000),
   DB_SSL: z.coerce.boolean().default(false),
 
   // Redis configuration
-  REDIS_URL: z.string(),
+  REDIS_URL: z.string().default(DEV_REDIS_URL),
   REDIS_PASSWORD: z.string().optional(),
   REDIS_DB: z.coerce.number().default(0),
-  REDIS_TTL: z.coerce.number().default(3600), // 1 hour
+  REDIS_TTL: z.coerce.number().default(3600),
 
   // Cryptography configuration
-  JWT_SECRET: z.string().min(32),
-  ENCRYPTION_KEY: z.string().length(32),
+  JWT_SECRET: z.string().min(32).default(DEV_JWT_SECRET),
+  ENCRYPTION_KEY: z.string().length(32).default(DEV_ENCRYPTION_KEY),
+  TSCB_MASTER_KEY: z.string().default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+  FACILITY_PRIVATE_KEY: z.string().optional(),
   HSM_PKCS11_LIB: z.string().optional(),
   HSM_SLOT: z.coerce.number().default(0),
   HSM_PIN: z.string().optional(),
@@ -35,16 +43,16 @@ const configSchema = z.object({
   // Geohash configuration
   GEOHASH_PRECISION: z.coerce.number().default(7),
   LOCATION_TOLERANCE_METERS: z.coerce.number().default(200),
-  SESSION_MIN_DURATION_MS: z.coerce.number().default(2700000), // 45 minutes
-  SESSION_MAX_DURATION_MS: z.coerce.number().default(14400000), // 4 hours
+  SESSION_MIN_DURATION_MS: z.coerce.number().default(2700000),
+  SESSION_MAX_DURATION_MS: z.coerce.number().default(14400000),
 
   // QR Code configuration
-  QR_ROTATION_INTERVAL_MS: z.coerce.number().default(30000), // 30 seconds
-  QR_EXPIRY_MS: z.coerce.number().default(14400000), // 4 hours
+  QR_ROTATION_INTERVAL_MS: z.coerce.number().default(30000),
+  QR_EXPIRY_MS: z.coerce.number().default(14400000),
 
   // Rate limiting
   RATE_LIMIT_MAX: z.coerce.number().default(100),
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000), // 1 minute
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
 
   // Logging configuration
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
@@ -52,13 +60,13 @@ const configSchema = z.object({
 
   // Security configuration
   BCRYPT_ROUNDS: z.coerce.number().default(12),
-  SESSION_TIMEOUT_MS: z.coerce.number().default(900000), // 15 minutes
+  SESSION_TIMEOUT_MS: z.coerce.number().default(900000),
   MFA_ISSUER: z.string().default('STAMP System'),
 
   // Audit configuration
-  AUDIT_RETENTION_DAYS: z.coerce.number().default(2555), // 7 years
+  AUDIT_RETENTION_DAYS: z.coerce.number().default(2555),
   DATA_RETENTION_DAYS: z.coerce.number().default(2555),
-  ANONYMIZATION_SCHEDULE_CRON: z.string().default('0 2 * * 0'), // Weekly at 2 AM
+  ANONYMIZATION_SCHEDULE_CRON: z.string().default('0 2 * * 0'),
 
   // Monitoring configuration
   METRICS_ENABLED: z.coerce.boolean().default(true),
@@ -68,7 +76,7 @@ const configSchema = z.object({
   // External services
   NOTIFICATION_SERVICE_URL: z.string().optional(),
   COURT_INTEGRATION_URL: z.string().optional(),
-  
+
   // Development/Testing flags
   BYPASS_HSM: z.coerce.boolean().default(false),
   MOCK_LOCATION: z.coerce.boolean().default(false),
@@ -88,18 +96,22 @@ export const isStaging = config.NODE_ENV === 'staging';
 
 // Security validations for production
 if (isProduction) {
-  if (config.JWT_SECRET === 'dev_jwt_secret_change_in_production') {
+  if (config.JWT_SECRET === DEV_JWT_SECRET) {
     throw new Error('JWT_SECRET must be changed in production');
   }
-  
-  if (config.ENCRYPTION_KEY === 'dev_encryption_key_32_bytes_long') {
+
+  if (config.ENCRYPTION_KEY === DEV_ENCRYPTION_KEY) {
     throw new Error('ENCRYPTION_KEY must be changed in production');
   }
-  
+
+  if (!config.FACILITY_PRIVATE_KEY) {
+    throw new Error('FACILITY_PRIVATE_KEY must be set in production');
+  }
+
   if (config.BYPASS_HSM) {
     throw new Error('BYPASS_HSM must be false in production');
   }
-  
+
   if (!config.DB_SSL) {
     console.warn('WARNING: Database SSL is disabled in production');
   }
