@@ -9,31 +9,27 @@
     "validator-portal"
   ],
   "scripts": {
-    "setup:dev": "npm install && npm run setup:db && npm run setup:keys",
-    "setup:db": "docker-compose up -d postgres redis && sleep 10 && npm run db:migrate",
-    "setup:keys": "node scripts/generate-dev-keys.js",
+    "setup:dev": "npm install",
+    "dev:demo": "node serve.js",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:portal": "npm run dev --workspace=validator-portal",
     "dev:mobile": "npm run start --workspace=mobile",
     "build:all": "npm run build --workspace=backend && npm run build --workspace=validator-portal",
+    "test:backend": "npm run test --workspace=backend",
     "test:all": "npm run test --workspace=backend && npm run test --workspace=validator-portal && npm run test --workspace=mobile",
     "lint:all": "npm run lint --workspace=backend && npm run lint --workspace=validator-portal && npm run lint --workspace=mobile",
     "db:migrate": "npm run db:migrate --workspace=backend",
     "db:seed": "npm run db:seed --workspace=backend",
-    "security:audit": "npm audit --workspaces && npm run security:scan",
-    "security:scan": "docker run --rm -v \"$PWD\":/src codeanalysis/sonarqube-scanner",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "deploy:staging": "npm run build:all && npm run docker:build && ./scripts/deploy-staging.sh",
-    "deploy:prod": "npm run security:audit && npm run test:all && ./scripts/deploy-production.sh"
+    "security:audit": "npm audit --workspaces",
+    "docker:build": "docker-compose build postgres redis softhsm",
+    "docker:up": "docker-compose up -d postgres redis softhsm",
+    "docker:down": "docker-compose down"
   },
   "keywords": [
     "attendance-verification",
     "court-compliance",
     "cryptography",
     "privacy-preserving",
-    "zero-knowledge-proofs",
     "geolocation",
     "probation",
     "parole"
@@ -44,7 +40,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stamp-system/stamp.git"
+    "url": "git+https://github.com/coolDad7777/STAMP-System.git"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.0.0",
@@ -62,7 +58,7 @@
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/stamp-system/stamp/issues"
+    "url": "https://github.com/coolDad7777/STAMP-System/issues"
   },
-  "homepage": "https://github.com/stamp-system/stamp#readme"
+  "homepage": "https://github.com/coolDad7777/STAMP-System#readme"
 }
