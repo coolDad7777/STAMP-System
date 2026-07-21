@@ -1,60 +1,89 @@
 # STAMP — Agent Notes
 
-STAMP (Secure Tracking & Anonymous Meeting Protocol) is a court-mandated attendance
-verification system. The core protocol is TSCB (Temporal-Spatial Cryptographic Binding):
-geohash + time-epoch + Ed25519-signed proof-of-presence tokens.
+STAMP (Secure Tracking & Anonymous Meeting Protocol) is a court-mandated attendance verification prototype. The core protocol is TSCB (Temporal-Spatial Cryptographic Binding): geohash + time-epoch + Ed25519-signed proof-of-presence tokens.
 
-See `README.md` for the product overview and `docs/` for architecture/deployment.
+See `README.md` for the product overview and `docs/` for architecture/deployment notes.
 
-## Cursor Cloud specific instructions
+## Current Development Goal
 
-This is an npm-workspaces monorepo (`backend`, `mobile`, `validator-portal`) plus several
-non-workspace components (`stamp_verify`, `serve.js` + static `*.html` demos, `blockchain`,
-`database`). Node 20+/npm 9+ (VM has Node 22). Docker is NOT installed in this VM.
+Prioritize a boring, working vertical slice over new conceptual expansion:
 
-### Install
-- Install with `npm install --legacy-peer-deps`. The plain `npm install` fails because the
-  `mobile` workspace has a peer-dependency conflict (`react-native-svg@12` vs
-  `react-native-qrcode-svg` wanting `>=14`). `mobile` is not runnable here anyway (needs
-  Xcode/Android emulators).
-- Do NOT run `npm run setup:dev` — it calls `scripts/generate-dev-keys.js` (missing) and a
-  backend `db:migrate` (missing); it will fail.
-- Dev `.env` files (`backend/.env`, `validator-portal/.env`) and `keys/dev/*` are created
-  during environment setup and persist in the VM snapshot. If they are ever missing, recreate
-  them from the heredoc templates inside `scripts/setup.sh` (the env-file + key-gen sections);
-  do not run the whole script (its Docker/db steps fail).
+1. backend starts locally with development defaults
+2. participant check-in creates a signed session proof
+3. participant check-out uses server-authoritative duration
+4. verifier endpoint and `stamp_verify` can validate records
+5. validator portal can run against the backend
 
-### What actually runs (use these to develop/test)
-- **Static demo portal** — `node serve.js` serves `demo-portal.html` at
-  http://localhost:3002/demo-portal.html. Self-contained validator-portal UI (demo logins:
-  officer/admin/auditor, dashboard, stamp verification, bulk verify). No build step.
-  `crypto-verification.html` and `stamp-demo.html` are additional self-contained demos
-  (`serve.js` only routes `demo-portal.html`; open the others as files or with a static server).
-- **`stamp_verify` CLI** — offline attendance-record auditor (the real core crypto). Run from
-  `stamp_verify/`: `node verify.js <record.json> --facility-key <hex-ed25519-pubkey> [--master-key <hex>]`.
-  Exit 0 = PASS, 1 = FAIL. It imports `libsodium-wrappers` via CommonJS `require`, which works
-  correctly; the dependency is resolved from the hoisted root `node_modules` (stamp_verify is
-  not a workspace, so it has no local install).
+Do not add more blockchain, federated learning, HSM, Kubernetes, or compliance-claim surface area until the core check-in/check-out flow is tested end to end.
 
-### Known-broken pieces (PRE-EXISTING source/config defects, NOT environment issues — do not assume these work)
-- **Backend dev (`npm run dev:backend`, i.e. `tsx watch src/server.ts`) crashes at startup.**
-  The source uses `import * as sodium from 'libsodium-wrappers'` and calls `sodium.crypto_*`.
-  Under esbuild/tsx the namespace object does not expose those methods (the live module is under
-  `sodium.default`), so calls like `sodium.crypto_sign_keypair()` are `undefined`. This affects
-  every crypto endpoint, not just startup. Fixing it requires source changes.
-- **Backend build (`npm run build`) fails** typechecking: `BlockchainVerificationService.ts`
-  imports a missing `ethers` module and references config keys that don't exist, plus the
-  libsodium namespace typing errors above. (`server.ts` does not import that service at runtime.)
-- **Backend tests (`npm test`) fail**: there is no `jest.config.js` (the script passes
-  `--config jest.config.js`) and `src/tests/TSCBProtocol.test.ts` imports a wrong path
-  (`../src/crypto/...`).
-- **Validator-portal Vite app fails to load**: `npm run dev` starts Vite but the app imports
-  `react-router-dom` throughout while `package.json` declares `@tanstack/react-router` instead,
-  so module resolution fails. `build`/`lint`/`test` are likewise blocked.
-- **Lint is unconfigured repo-wide**: there are no ESLint config files, so every `npm run lint`
-  errors with "couldn't find a configuration file".
-- **`docker-compose.yml` cannot build the app services**: it references non-existent
-  `backend/Dockerfile.dev`, `validator-portal/Dockerfile.dev`, an `infrastructure/` dir, and
-  `database/init.sql`. Only the `postgres`/`redis`/`softhsm` image services are valid. The
-  backend does not actually need them anyway: `DatabaseService` silently falls back to "mock
-  mode" if Postgres is unreachable, and Redis is declared in config but never connected.
+## Repo Layout
+
+This is an npm-workspaces monorepo:
+
+- `backend` — Node/TypeScript API
+- `mobile` — React Native app
+- `validator-portal` — React/Vite portal
+
+It also contains non-workspace components:
+
+- `stamp_verify` — offline attendance-record verifier
+- `serve.js` + static `*.html` demos
+- `blockchain` — experimental smart contract materials
+- `database` — schema/migration material
+
+## Install
+
+Use:
+
+```bash
+npm run setup:dev
+```
+
+This currently runs `npm install`. Do not reintroduce missing setup scripts unless they are committed and tested.
+
+## Run Commands
+
+```bash
+npm run dev:backend
+npm run dev:portal
+npm run dev:demo
+npm run test:backend
+```
+
+The backend has development defaults. If Postgres is unavailable, `DatabaseService` falls back to mock mode.
+
+## Static Demo Portal
+
+`node serve.js` serves `demo-portal.html` at:
+
+```text
+http://localhost:3002/demo-portal.html
+```
+
+The static demo is useful for investor/product walkthroughs, but it is not proof that the full monorepo is production-ready.
+
+## `stamp_verify` CLI
+
+The offline verifier lives in `stamp_verify/`:
+
+```bash
+cd stamp_verify
+node verify.js <record.json> --facility-key <hex-ed25519-pubkey> [--master-key <hex>]
+```
+
+Exit code `0` means PASS. Exit code `1` means FAIL.
+
+## Known Constraints
+
+- Mobile still requires a real React Native local setup with Xcode or Android tooling.
+- Docker Compose is only reliable for image-backed services that actually exist in the repo.
+- The blockchain service is currently a buildable local adapter, not a deployed chain integration.
+- Compliance references are requirements and review targets, not completed certifications.
+- Production must not use development secrets or ephemeral facility keys.
+
+## Engineering Rules
+
+- Fix install/build/test blockers before adding features.
+- Keep compliance wording factual and conservative.
+- Treat government, court, probation, health, and recovery data as sensitive by default.
+- Do not store legal names, precise location trails, or recovery-meeting details in proof records unless a reviewed product requirement demands it.
