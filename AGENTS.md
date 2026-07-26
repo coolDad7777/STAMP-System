@@ -14,9 +14,13 @@ non-workspace components (`stamp_verify`, `serve.js` + static `*.html` demos, `b
 
 ### Install
 - Install with `npm install --legacy-peer-deps`. The plain `npm install` fails because the
-  `mobile` workspace has a peer-dependency conflict (`react-native-svg@12` vs
-  `react-native-qrcode-svg` wanting `>=14`). `mobile` is not runnable here anyway (needs
-  Xcode/Android emulators).
+ `mobile` workspace has a peer-dependency conflict (`react-native-svg@12` vs
+ `react-native-qrcode-svg` wanting `>=14`). `mobile` is not runnable here anyway (needs
+ Xcode/Android emulators).
+- The install occasionally aborts with a transient `ENOTEMPTY: ... rmdir` error (seen under
+ `@sentry-internal/tracing`) while extracting the large dep tree. This is a filesystem race,
+ not a real dependency problem — simply re-run `npm install --legacy-peer-deps` and it
+ completes cleanly.
 - Do NOT run `npm run setup:dev` — it calls `scripts/generate-dev-keys.js` (missing) and a
   backend `db:migrate` (missing); it will fail.
 - Dev `.env` files (`backend/.env`, `validator-portal/.env`) and `keys/dev/*` are created
