@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAMP Participant App - Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+    <main class="mx-auto min-h-screen max-w-md bg-white shadow-xl">
+        <header class="bg-blue-700 px-5 pb-6 pt-8 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-blue-100">Welcome back</p>
+                    <h1 class="text-2xl font-bold">Jordan Taylor</h1>
+                </div>
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-bold">
+                    JT
+                </div>
+            </div>
+            <div class="mt-5 rounded-xl bg-blue-800/60 p-4">
+                <p class="text-xs font-medium uppercase tracking-wide text-blue-200">Compliance status</p>
+                <div class="mt-1 flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-green-400"></span>
+                    <p class="font-semibold">On track</p>
+                </div>
+            </div>
+        </header>
+
+        <section class="space-y-5 px-5 py-6">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Next required meeting</p>
+                <div class="mt-2 rounded-2xl border border-slate-200 p-5 shadow-sm">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-bold">Recovery Support Group</h2>
+                            <p class="mt-1 text-sm text-slate-600">Today, 7:00 PM–8:00 PM</p>
+                            <p class="mt-1 text-sm text-slate-600">Demo Community Center</p>
+                        </div>
+                        <span id="meeting-badge" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                            Upcoming
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21s7-4.35 7-11a7 7 0 10-14 0c0 6.65 7 11 7 11z"></path>
+                            <circle cx="12" cy="10" r="2.5" stroke-width="2"></circle>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="font-bold">Location verification</h2>
+                        <p id="location-summary" class="text-sm text-slate-500">Not checked yet</p>
+                    </div>
+                </div>
+
+                <div id="location-details" class="mt-4 hidden rounded-xl bg-slate-50 p-4 text-sm">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <p class="text-xs text-slate-500">Latitude</p>
+                            <p id="latitude" class="font-mono font-medium"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500">Longitude</p>
+                            <p id="longitude" class="font-mono font-medium"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500">Accuracy</p>
+                            <p id="accuracy" class="font-medium"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500">Geofence</p>
+                            <p id="geofence" class="font-medium"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <p id="status-message" class="mt-4 hidden rounded-lg p-3 text-sm" role="status" aria-live="polite"></p>
+
+                <button
+                    id="location-button"
+                    type="button"
+                    onclick="verifyLocation()"
+                    class="mt-4 w-full rounded-xl bg-blue-700 px-4 py-3 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Enable Location
+                </button>
+                <p class="mt-3 text-center text-xs text-slate-500">
+                    Demo coordinates stay in your browser and are not uploaded.
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <h2 class="font-bold">Attendance</h2>
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                    <div class="rounded-xl bg-slate-50 p-3">
+                        <p class="text-xs text-slate-500">Checked in</p>
+                        <p id="checkin-time" class="mt-1 font-semibold">—</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 p-3">
+                        <p class="text-xs text-slate-500">Checked out</p>
+                        <p id="checkout-time" class="mt-1 font-semibold">—</p>
+                    </div>
+                </div>
+
+                <button
+                    id="attendance-button"
+                    type="button"
+                    onclick="handleAttendance()"
+                    disabled
+                    class="mt-4 w-full rounded-xl bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                    Verify Location First
+                </button>
+            </div>
+
+            <div id="stamp-card" class="hidden rounded-2xl border-2 border-green-200 bg-green-50 p-5">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-green-600 text-white">✓</div>
+                    <div>
+                        <h2 class="font-bold text-green-900">Attendance stamp created</h2>
+                        <p class="text-sm text-green-700">Ready for validator review</p>
+                    </div>
+                </div>
+                <div class="mt-4 rounded-lg bg-white/70 p-3 text-sm">
+                    <p class="text-xs text-green-700">Stamp ID</p>
+                    <p id="stamp-id" class="mt-1 break-all font-mono font-semibold text-green-900"></p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const state = {
+            location: null,
+            meetingLocation: null,
+            checkedIn: false,
+            checkedOut: false
+        };
+
+        function setStatus(message, type) {
+            const element = document.getElementById('status-message');
+            const classes = {
+                info: 'bg-blue-50 text-blue-800',
+                success: 'bg-green-50 text-green-800',
+                warning: 'bg-amber-50 text-amber-800',
+                error: 'bg-red-50 text-red-800'
+            };
+
+            element.textContent = message;
+            element.className = `mt-4 rounded-lg p-3 text-sm ${classes[type]}`;
+        }
+
+        function distanceInMeters(first, second) {
+            const earthRadius = 6371000;
+            const toRadians = value => value * Math.PI / 180;
+            const latitudeDelta = toRadians(second.latitude - first.latitude);
+            const longitudeDelta = toRadians(second.longitude - first.longitude);
+            const firstLatitude = toRadians(first.latitude);
+            const secondLatitude = toRadians(second.latitude);
+            const value = Math.sin(latitudeDelta / 2) ** 2
+                + Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+
+            return earthRadius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+        }
+
+        function verifyLocation() {
+            const button = document.getElementById('location-button');
+
+            if (!window.isSecureContext || !navigator.geolocation) {
+                setStatus('Location requires HTTPS and a browser that supports geolocation.', 'error');
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = 'Finding Your Location...';
+            setStatus('Allow location access when your browser asks.', 'info');
+
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    state.location = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+
+                    // In demo mode, the first verified position becomes the simulated meeting location.
+                    if (!state.meetingLocation) {
+                        state.meetingLocation = { ...state.location };
+                    }
+
+                    const distance = distanceInMeters(state.location, state.meetingLocation);
+                    const inGeofence = distance <= 100 && state.location.accuracy <= 100;
+
+                    document.getElementById('latitude').textContent = state.location.latitude.toFixed(6);
+                    document.getElementById('longitude').textContent = state.location.longitude.toFixed(6);
+                    document.getElementById('accuracy').textContent = `±${Math.round(state.location.accuracy)} m`;
+                    document.getElementById('geofence').textContent = inGeofence ? 'Inside' : 'Outside';
+                    document.getElementById('geofence').className = inGeofence
+                        ? 'font-medium text-green-700'
+                        : 'font-medium text-red-700';
+                    document.getElementById('location-details').classList.remove('hidden');
+                    document.getElementById('location-summary').textContent = inGeofence
+                        ? 'Verified inside demo meeting area'
+                        : 'Signal needs better accuracy';
+
+                    const attendanceButton = document.getElementById('attendance-button');
+                    attendanceButton.disabled = !inGeofence || state.checkedOut;
+
+                    if (inGeofence) {
+                        attendanceButton.textContent = state.checkedIn ? 'Check Out' : 'Check In';
+                        setStatus('Location verified. You are inside the 100-meter demo geofence.', 'success');
+                    } else {
+                        attendanceButton.textContent = 'Location Not Eligible';
+                        setStatus('Location was found, but accuracy must be within 100 meters.', 'warning');
+                    }
+
+                    button.disabled = false;
+                    button.textContent = 'Refresh Location';
+                },
+                error => {
+                    const messages = {
+                        1: 'Location permission was denied. Allow it in browser settings and try again.',
+                        2: 'Location is unavailable. Confirm location services are enabled.',
+                        3: 'The location request timed out. Please try again.'
+                    };
+
+                    setStatus(messages[error.code] || 'Unable to verify location.', 'error');
+                    button.disabled = false;
+                    button.textContent = 'Try Location Again';
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+
+        function handleAttendance() {
+            if (!state.location) {
+                setStatus('Verify your location before recording attendance.', 'error');
+                return;
+            }
+
+            const currentTime = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            const button = document.getElementById('attendance-button');
+
+            if (!state.checkedIn) {
+                state.checkedIn = true;
+                document.getElementById('checkin-time').textContent = currentTime;
+                document.getElementById('meeting-badge').textContent = 'Checked In';
+                document.getElementById('meeting-badge').className = 'rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800';
+                button.textContent = 'Check Out';
+                setStatus('Check-in recorded. Refresh your location before checking out if you move.', 'success');
+                return;
+            }
+
+            state.checkedOut = true;
+            document.getElementById('checkout-time').textContent = currentTime;
+            document.getElementById('meeting-badge').textContent = 'Complete';
+            button.textContent = 'Attendance Complete';
+            button.disabled = true;
+
+            const stampId = `STAMP-${Date.now().toString(36).toUpperCase()}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(16).toUpperCase()}`;
+            document.getElementById('stamp-id').textContent = stampId;
+            document.getElementById('stamp-card').classList.remove('hidden');
+            setStatus('Check-out recorded and a demo attendance stamp was generated.', 'success');
+        }
+    </script>
+</body>
+</html>

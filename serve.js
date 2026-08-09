@@ -9,12 +9,14 @@ const server = http.createServer((req, res) => {
     
     let filePath;
     if (req.url === '/' || req.url === '/index.html') {
-        filePath = path.join(__dirname, 'demo-portal.html');
+        filePath = path.join(__dirname, 'participant-demo.html');
+    } else if (req.url === '/participant-demo.html') {
+        filePath = path.join(__dirname, 'participant-demo.html');
     } else if (req.url === '/demo-portal.html') {
         filePath = path.join(__dirname, 'demo-portal.html');
     } else {
         res.writeHead(404, { 'Content-Type': 'text/html' });
-        res.end('<h1>404 Not Found</h1><p>Try <a href="/demo-portal.html">STAMP Demo Portal</a></p>');
+        res.end('<h1>404 Not Found</h1><p>Try the <a href="/participant-demo.html">participant demo</a> or <a href="/demo-portal.html">validator portal</a>.</p>');
         return;
     }
 
@@ -36,7 +38,8 @@ const server = http.createServer((req, res) => {
 
 server.listen(port, '0.0.0.0', () => {
     console.log(`🚀 STAMP Demo Server running at http://localhost:${port}/`);
-    console.log(`📱 Open: http://localhost:${port}/demo-portal.html`);
+    console.log(`📱 Participant app: http://localhost:${port}/participant-demo.html`);
+    console.log(`🛡️ Validator portal: http://localhost:${port}/demo-portal.html`);
     console.log('');
     console.log('🎯 Demo Features:');
     console.log('  • Click any demo account button to login instantly');
