@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import * as sodium from 'libsodium-wrappers';
+import sodium from 'libsodium-wrappers';
 import { CryptoService } from './CryptoService';
 
 /**

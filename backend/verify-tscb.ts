@@ -8,7 +8,7 @@
  */
 
 import { TSCBProtocol } from './src/crypto/TSCBProtocol';
-import * as sodium from 'libsodium-wrappers';
+import sodium from 'libsodium-wrappers';
 import * as crypto from 'crypto';
 
 async function runVerificationTests() {

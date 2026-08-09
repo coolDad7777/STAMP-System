@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as crypto from 'crypto';
-import * as sodium from 'libsodium-wrappers';
+import sodium from 'libsodium-wrappers';
 import { TSCBProtocol, TSCBProof } from '../crypto/TSCBProtocol';
 
 const protocol = new TSCBProtocol(process.env.TSCB_MASTER_KEY || 'default-master-key');

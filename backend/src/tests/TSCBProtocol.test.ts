@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from '@jest/globals';
-import { TSCBProtocol, TemporalChallenge, TSCBProof } from '../src/crypto/TSCBProtocol';
-import * as sodium from 'libsodium-wrappers';
+import { TSCBProtocol, TemporalChallenge, TSCBProof } from '../crypto/TSCBProtocol';
+import sodium from 'libsodium-wrappers';
 
 /**
  * TSCB Protocol Security Tests
@@ -58,7 +58,7 @@ describe('TSCB Protocol Security Tests', () => {
     });
 
     it('should accept challenges within valid time window', async () => {
-      const now = Date.now();
+      const now = Math.floor(Date.now() / 30000) * 30000 + 10000;
       const challenge = protocol.generateTemporalChallenge(MEETING_ID, now);
       
       // Validate 5 seconds later (still within 30s window)
