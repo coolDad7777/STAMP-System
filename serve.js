@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const port = 3002;
+const port = Number(process.env.PORT) || 4747;
 
 const server = http.createServer((req, res) => {
     console.log(`Request for: ${req.url}`);
