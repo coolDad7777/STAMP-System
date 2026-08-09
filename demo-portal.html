@@ -295,6 +295,33 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Device location test -->
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 class="text-lg font-medium text-gray-900">Location Check Demo</h3>
+                                    <p class="mt-1 text-sm text-gray-500">
+                                        Test the location signal used for attendance check-in. Your coordinates stay in this browser demo.
+                                    </p>
+                                </div>
+                                <button
+                                    id="location-test-button"
+                                    onclick="testLocation()"
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                                >
+                                    Test My Location
+                                </button>
+                            </div>
+                            <div id="location-result" class="hidden mt-4 rounded-lg border p-4" role="status" aria-live="polite">
+                                <p id="location-status" class="font-medium"></p>
+                                <div id="location-details" class="hidden mt-2 grid grid-cols-1 gap-2 text-sm text-gray-600 sm:grid-cols-3">
+                                    <p>Latitude: <span id="location-latitude" class="font-mono text-gray-900"></span></p>
+                                    <p>Longitude: <span id="location-longitude" class="font-mono text-gray-900"></span></p>
+                                    <p>Accuracy: <span id="location-accuracy" class="font-mono text-gray-900"></span></p>
+                                </div>
+                            </div>
+                        </div>
                         
                         <!-- Main dashboard grid -->
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -635,6 +662,73 @@
                 const checkbox = row.querySelector('input[type="checkbox"]');
                 if (checkbox) checkbox.disabled = true;
             }, 1000);
+        }
+
+        function showLocationResult(message, state, position) {
+            const result = document.getElementById('location-result');
+            const details = document.getElementById('location-details');
+            const stateClasses = {
+                loading: 'border-blue-200 bg-blue-50 text-blue-800',
+                success: 'border-green-200 bg-green-50 text-green-800',
+                error: 'border-red-200 bg-red-50 text-red-800'
+            };
+
+            result.className = `mt-4 rounded-lg border p-4 ${stateClasses[state]}`;
+            document.getElementById('location-status').textContent = message;
+
+            if (position) {
+                document.getElementById('location-latitude').textContent = position.coords.latitude.toFixed(6);
+                document.getElementById('location-longitude').textContent = position.coords.longitude.toFixed(6);
+                document.getElementById('location-accuracy').textContent = `±${Math.round(position.coords.accuracy)} m`;
+                details.classList.remove('hidden');
+            } else {
+                details.classList.add('hidden');
+            }
+        }
+
+        function testLocation() {
+            const button = document.getElementById('location-test-button');
+
+            if (!window.isSecureContext || !navigator.geolocation) {
+                showLocationResult(
+                    'Location is unavailable. Open the demo over HTTPS or localhost in a supported browser.',
+                    'error'
+                );
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = 'Finding Location...';
+            showLocationResult('Waiting for browser location permission...', 'loading');
+
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    const accuracy = Math.round(position.coords.accuracy);
+                    const message = accuracy <= 100
+                        ? 'Location signal ready for a demo check-in.'
+                        : 'Location found, but accuracy is too low for a reliable check-in. Try moving near a window.';
+
+                    showLocationResult(message, accuracy <= 100 ? 'success' : 'error', position);
+                    button.disabled = false;
+                    button.textContent = 'Test Again';
+                },
+                error => {
+                    const messages = {
+                        1: 'Location permission was denied. Allow location access in your browser and try again.',
+                        2: 'Your location could not be determined. Check that device location services are enabled.',
+                        3: 'The location request timed out. Please try again.'
+                    };
+
+                    showLocationResult(messages[error.code] || 'Location check failed. Please try again.', 'error');
+                    button.disabled = false;
+                    button.textContent = 'Try Again';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                }
+            );
         }
 
         // Utility functions

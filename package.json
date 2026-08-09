@@ -9,6 +9,7 @@
     "validator-portal"
   ],
   "scripts": {
+    "demo": "node serve.js",
     "setup:dev": "npm install && npm run setup:db && npm run setup:keys",
     "setup:db": "docker-compose up -d postgres redis && sleep 10 && npm run db:migrate",
     "setup:keys": "node scripts/generate-dev-keys.js",

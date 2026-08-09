@@ -34,7 +34,7 @@ const server = http.createServer((req, res) => {
     });
 });
 
-server.listen(port, 'localhost', () => {
+server.listen(port, '0.0.0.0', () => {
     console.log(`🚀 STAMP Demo Server running at http://localhost:${port}/`);
     console.log(`📱 Open: http://localhost:${port}/demo-portal.html`);
     console.log('');
