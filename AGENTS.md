@@ -19,38 +19,43 @@ non-workspace components (`stamp_verify`, `serve.js` + static `*.html` demos, `b
   Xcode/Android emulators).
 - Do NOT run `npm run setup:dev` — it calls `scripts/generate-dev-keys.js` (missing) and a
   backend `db:migrate` (missing); it will fail.
-- Dev `.env` files (`backend/.env`, `validator-portal/.env`) and `keys/dev/*` are created
-  during environment setup and persist in the VM snapshot. If they are ever missing, recreate
-  them from the heredoc templates inside `scripts/setup.sh` (the env-file + key-gen sections);
-  do not run the whole script (its Docker/db steps fail).
+- Dev `.env` files (`backend/.env`, `validator-portal/.env`, `mobile/.env`) and `keys/dev/*`
+  are created during environment setup and persist in the VM snapshot. If they are ever missing,
+  recreate them from the heredoc templates inside `scripts/setup.sh` (the env-file + key-gen
+  sections); do not run the whole script (its Docker/db steps fail).
+- After creating `keys/dev/master.key`, append `TSCB_MASTER_KEY=<that hex>` to `backend/.env`
+  when the line is absent. Check-in reads it at process start. `stamp_verify --master-key`
+  must be the same hex or the temporal-challenge check will not match.
 
 ### What actually runs (use these to develop/test)
+- **Backend API** — from `backend/`: `npx tsx src/server.ts` (or `npm run dev`). Listens on
+  `0.0.0.0:3000`. Postgres is not running here, so `DatabaseService` logs a warning and stays
+  in mock mode. `GET /health` returns `{"status":"healthy"}`. `POST /api/checkin` then
+  `POST /api/checkout` keep the session in memory; `GET /api/session/:id` returns the TSCB
+  proof and `GET /api/facility-pubkey` returns the Ed25519 facility key for auditors.
 - **Static demo portal** — `node serve.js` serves `demo-portal.html` at
-  http://localhost:3002/demo-portal.html. Self-contained validator-portal UI (demo logins:
+  http://localhost:3002/demo-portal.html and `participant-demo.html` at
+  http://localhost:3002/participant-demo.html. Self-contained validator-portal UI (demo logins:
   officer/admin/auditor, dashboard, stamp verification, bulk verify). No build step.
   `crypto-verification.html` and `stamp-demo.html` are additional self-contained demos
-  (`serve.js` only routes `demo-portal.html`; open the others as files or with a static server).
+  (`serve.js` does not route them; open them as files or with a static server).
 - **`stamp_verify` CLI** — offline attendance-record auditor (the real core crypto). Run from
   `stamp_verify/`: `node verify.js <record.json> --facility-key <hex-ed25519-pubkey> [--master-key <hex>]`.
-  Exit 0 = PASS, 1 = FAIL. It imports `libsodium-wrappers` via CommonJS `require`, which works
-  correctly; the dependency is resolved from the hoisted root `node_modules` (stamp_verify is
-  not a workspace, so it has no local install).
+  Exit 0 = PASS, 1 = FAIL. Feed it the JSON from `GET /api/session/:id` plus the facility
+  public key and `TSCB_MASTER_KEY`. It imports `libsodium-wrappers` via CommonJS `require`,
+  which works correctly; the dependency is resolved from the hoisted root `node_modules`
+  (stamp_verify is not a workspace, so it has no local install).
+- **Backend tests** — `npm test --workspace=backend` (Jest, `backend/jest.config.js`). They
+  pass when `backend/.env` exists.
 
 ### Known-broken pieces (PRE-EXISTING source/config defects, NOT environment issues — do not assume these work)
-- **Backend dev (`npm run dev:backend`, i.e. `tsx watch src/server.ts`) crashes at startup.**
-  The source uses `import * as sodium from 'libsodium-wrappers'` and calls `sodium.crypto_*`.
-  Under esbuild/tsx the namespace object does not expose those methods (the live module is under
-  `sodium.default`), so calls like `sodium.crypto_sign_keypair()` are `undefined`. This affects
-  every crypto endpoint, not just startup. Fixing it requires source changes.
-- **Backend build (`npm run build`) fails** typechecking: `BlockchainVerificationService.ts`
-  imports a missing `ethers` module and references config keys that don't exist, plus the
-  libsodium namespace typing errors above. (`server.ts` does not import that service at runtime.)
-- **Backend tests (`npm test`) fail**: there is no `jest.config.js` (the script passes
-  `--config jest.config.js`) and `src/tests/TSCBProtocol.test.ts` imports a wrong path
-  (`../src/crypto/...`).
+- **Backend build (`npm run build --workspace=backend`) fails** typechecking:
+  `BlockchainVerificationService.ts` imports a missing `ethers` module and references config
+  keys that don't exist. `server.ts` does not import that service at runtime.
 - **Validator-portal Vite app fails to load**: `npm run dev` starts Vite but the app imports
   `react-router-dom` throughout while `package.json` declares `@tanstack/react-router` instead,
-  so module resolution fails. `build`/`lint`/`test` are likewise blocked.
+  so module resolution fails. `build`/`lint`/`test` are likewise blocked. Use `serve.js` for
+  the demo UI.
 - **Lint is unconfigured repo-wide**: there are no ESLint config files, so every `npm run lint`
   errors with "couldn't find a configuration file".
 - **`docker-compose.yml` cannot build the app services**: it references non-existent
