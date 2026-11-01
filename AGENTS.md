@@ -63,3 +63,12 @@ non-workspace components (`stamp_verify`, `serve.js` + static `*.html` demos, `b
   `database/init.sql`. Only the `postgres`/`redis`/`softhsm` image services are valid. The
   backend does not actually need them anyway: `DatabaseService` silently falls back to "mock
   mode" if Postgres is unreachable, and Redis is declared in config but never connected.
+
+## Registered meeting attendance safeguard
+
+The attendance API now requires v2 location-bound participant signatures and a trusted
+`STAMP_MEETINGS_FILE` registry. With no registry it rejects every meeting. See
+`docs/attendance-location-v2.md` for operator setup, client migration, and remaining
+trust gaps. This supersedes the earlier unrestricted check-in/checkout instructions.
+The demo UIs are not v2 clients. GPS claims and cryptographic proof integrity must
+not be described as independent physical attendance verification.

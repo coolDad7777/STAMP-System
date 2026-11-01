@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as crypto from 'crypto';
 import sodium from 'libsodium-wrappers';
 import { TSCBProtocol, TSCBProof } from '../crypto/TSCBProtocol';
+import { RegisteredMeeting, loadMeetings, locationError, checkinMessage, checkoutMessage } from '../services/MeetingRegistry';
 
 const protocol = new TSCBProtocol(process.env.TSCB_MASTER_KEY || 'default-master-key');
 
@@ -31,22 +32,29 @@ async function loadFacilityKeypair(): Promise<void> {
 }
 
 interface CheckinBody {
+  version: 2;
+  accuracyMeters: number;
   participantToken: string;   // hex-encoded Ed25519 public key (pseudonymous ID)
   meetingId: string;
   latitude: number;
   longitude: number;
   timestamp: number;
-  signature: string;          // Ed25519 sig over (meetingId || timestamp), hex — proves key ownership
+  signature: string;          // Signature over checkinMessage v2
 }
 
 interface CheckoutBody {
+  version: 2;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number;
+  timestamp: number;
   sessionId: string;
   participantToken: string;
-  signature: string;          // Ed25519 sig over (sessionId || serverCheckinTime), hex
+  signature: string;          // Signature over checkoutMessage v2
 }
 
 // In-memory session store — replace with DatabaseService in production
-const sessions = new Map<string, {
+type Session = {
   sessionId: string;
   participantToken: string;
   meetingId: string;
@@ -54,11 +62,14 @@ const sessions = new Map<string, {
   checkinTime: number;        // server wall-clock time at check-in (not client-supplied)
   checkoutTime?: number;      // server wall-clock time at checkout
   status: 'active' | 'completed';
-}>();
+  meeting: RegisteredMeeting;
+};
 
 export async function checkinRoutes(fastify: FastifyInstance) {
   await protocol.initialize();
   await loadFacilityKeypair();
+  const meetings = loadMeetings();
+  const sessions = new Map<string, Session>();
 
   // GET /api/facility-pubkey — auditors retrieve the facility public key out-of-band
   fastify.get('/api/facility-pubkey', async (_request, reply) => {
@@ -73,33 +84,30 @@ export async function checkinRoutes(fastify: FastifyInstance) {
     schema: {
       body: {
         type: 'object',
-        required: ['participantToken', 'meetingId', 'latitude', 'longitude', 'timestamp', 'signature'],
+        additionalProperties: false,
+        required: ['version', 'participantToken', 'meetingId', 'latitude', 'longitude', 'accuracyMeters', 'timestamp', 'signature'],
         properties: {
-          participantToken: { type: 'string' },
-          meetingId: { type: 'string' },
-          latitude: { type: 'number' },
-          longitude: { type: 'number' },
-          timestamp: { type: 'number' },
-          signature: { type: 'string' }
+          version: { type: 'integer', const: 2 },
+          accuracyMeters: { type: 'number', exclusiveMinimum: 0, maximum: 100 },
+          participantToken: { type: 'string', pattern: '^[a-fA-F0-9]{64}$' },
+          meetingId: { type: 'string', minLength: 1, maxLength: 128 },
+          latitude: { type: 'number', minimum: -90, maximum: 90 },
+          longitude: { type: 'number', minimum: -180, maximum: 180 },
+          timestamp: { type: 'integer', minimum: 0 },
+          signature: { type: 'string', pattern: '^[a-fA-F0-9]{128}$' }
         }
       }
     }
   }, async (request: FastifyRequest<{ Body: CheckinBody }>, reply: FastifyReply) => {
     const { participantToken, meetingId, latitude, longitude, timestamp, signature } = request.body;
 
-    // Verify client timestamp is fresh (±2 minutes) — used only for TSCB epoch, not for duration
-    const drift = Math.abs(Date.now() - timestamp);
-    if (drift > 120000) {
-      return reply.code(400).send({ error: 'Timestamp too old or in the future' });
-    }
+    const meeting = meetings.get(meetingId);
+    if (!meeting) return reply.code(404).send({ error: 'Unknown meeting' });
+    const rejected = locationError(meeting, request.body, Date.now());
+    if (rejected) return reply.code(400).send({ error: rejected });
 
-    // Verify the participant's Ed25519 signature over (meetingId || timestamp)
-    // This proves they hold the private key — prevents token theft
     const publicKeyBytes = Buffer.from(participantToken, 'hex');
-    const message = Buffer.concat([
-      Buffer.from(meetingId),
-      Buffer.from(timestamp.toString())
-    ]);
+    const message = checkinMessage(request.body);
     let sigValid = false;
     try {
       sigValid = sodium.crypto_sign_verify_detached(
@@ -141,7 +149,8 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       meetingId,
       checkinProof: proof,
       checkinTime: serverCheckinTime,
-      status: 'active'
+      status: 'active',
+      meeting
     });
 
     return reply.code(201).send({
@@ -161,11 +170,17 @@ export async function checkinRoutes(fastify: FastifyInstance) {
     schema: {
       body: {
         type: 'object',
-        required: ['sessionId', 'participantToken', 'signature'],
+        additionalProperties: false,
+        required: ['version', 'sessionId', 'participantToken', 'latitude', 'longitude', 'accuracyMeters', 'timestamp', 'signature'],
         properties: {
           sessionId: { type: 'string' },
-          participantToken: { type: 'string' },
-          signature: { type: 'string' }
+          latitude: { type: 'number', minimum: -90, maximum: 90 },
+          longitude: { type: 'number', minimum: -180, maximum: 180 },
+          timestamp: { type: 'integer', minimum: 0 },
+          version: { type: 'integer', const: 2 },
+          accuracyMeters: { type: 'number', exclusiveMinimum: 0, maximum: 100 },
+          participantToken: { type: 'string', pattern: '^[a-fA-F0-9]{64}$' },
+          signature: { type: 'string', pattern: '^[a-fA-F0-9]{128}$' }
         }
       }
     }
@@ -187,12 +202,9 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       return reply.code(403).send({ error: 'Token mismatch' });
     }
 
-    // Signature is over (sessionId || serverCheckinTime) — binds checkout to the specific
-    // server-recorded check-in time so the client cannot alter the duration baseline.
-    const message = Buffer.concat([
-      Buffer.from(sessionId),
-      Buffer.from(session.checkinTime.toString())
-    ]);
+    const rejected = locationError(session.meeting, request.body, Date.now());
+    if (rejected) return reply.code(400).send({ error: rejected });
+    const message = checkoutMessage(request.body, session.checkinTime);
     let sigValid = false;
     try {
       sigValid = sodium.crypto_sign_verify_detached(
@@ -212,6 +224,10 @@ export async function checkinRoutes(fastify: FastifyInstance) {
     const durationMs = serverCheckoutTime - session.checkinTime;
     const durationMinutes = Math.floor(durationMs / 60000);
 
+    if (durationMs < session.meeting.minimumDurationMs) {
+      return reply.code(409).send({ error: 'Minimum attendance duration not reached' });
+    }
+
     session.status = 'completed';
     session.checkoutTime = serverCheckoutTime;
 
@@ -219,7 +235,7 @@ export async function checkinRoutes(fastify: FastifyInstance) {
       sessionId,
       checkedOut: true,
       durationMinutes,
-      meetsMinimum: durationMinutes >= 45,
+      meetsMinimum: true,
       checkinBindingHash: session.checkinProof.bindingHash
     });
   });
